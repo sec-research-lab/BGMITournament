@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal — BGMI Tournament</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== Admin Login ===== -->
+  <div class="auth-wrap" id="loginView">
+    <div class="auth-card">
+      <div class="brand">🛡️ ADMIN <span>PORTAL</span></div>
+      <div class="subtitle">BGMI Tournament management</div>
+      <div id="loginMsg" class="form-msg"></div>
+      <form id="adminLoginForm">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="adminUser" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="adminPass" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%">LOGIN AS ADMIN</button>
+      </form>
+      <div class="auth-footer"><a href="login.html">← Back to player login</a></div>
+    </div>
+  </div>
+
+  <!-- ===== Admin Panel ===== -->
+  <div id="panelView" style="display:none">
+    <nav class="navbar">
+      <div class="logo">🛡️ ADMIN <span>PORTAL</span></div>
+      <div class="nav-right">
+        <button class="btn btn-outline btn-sm" onclick="adminLogout()">Logout</button>
+      </div>
+    </nav>
+
+    <div class="admin-layout">
+      <div class="sidebar">
+        <button class="active" data-view="tournaments" onclick="switchView('tournaments', this)">🏆 Tournaments</button>
+        <button data-view="users" onclick="switchView('users', this)">👥 Registered Users</button>
+      </div>
+
+      <div class="admin-content">
+        <!-- Tournaments view -->
+        <div id="view-tournaments">
+          <div class="stat-row">
+            <div class="stat-card"><div class="num" id="statTournaments">0</div><div class="lbl">Tournaments</div></div>
+            <div class="stat-card"><div class="num" id="statLive">0</div><div class="lbl">Live Matches</div></div>
+            <div class="stat-card"><div class="num" id="statUsers">0</div><div class="lbl">Registered Users</div></div>
+            <div class="stat-card"><div class="num" id="statJoins">0</div><div class="lbl">Total Joins</div></div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div class="page-title" style="margin:0">Tournaments</div>
+            <button class="btn btn-primary" onclick="openCreate()">+ Create Tournament</button>
+          </div>
+
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Photo</th><th>Name</th><th>Type</th><th>Date/Time</th>
+                  <th>Room ID</th><th>Players</th><th>Match Status</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tournamentRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Users view -->
+        <div id="view-users" style="display:none">
+          <div class="page-title" style="margin-bottom:16px">Registered Users</div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th><th>Full Name</th><th>BGMI ID</th><th>In-Game Name</th>
+                  <th>Email</th><th>Phone</th><th>Registered On</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="userRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Create/Edit Tournament Modal ===== -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <h2 id="modalTitle">Create Tournament</h2>
+      <div id="modalMsg" class="form-msg"></div>
+      <form id="tournamentForm">
+        <input type="hidden" id="tId">
+        <div class="form-group">
+          <label>Tournament Name</label>
+          <input type="text" id="tName" placeholder="e.g. Sunday Showdown" required>
+        </div>
+        <div class="row2">
+          <div class="form-group">
+            <label>Type (any mode you want)</label>
+            <input type="text" id="tType" placeholder="e.g. 1v1, 2v2, Squad, Erangel" list="typeSuggestions">
+            <datalist id="typeSuggestions">
+              <option value="1v1"></option>
+              <option value="2v2"></option>
+              <option value="4v4"></option>
+              <option value="Squad"></option>
+              <option value="Duo"></option>
+              <option value="Solo"></option>
+              <option value="Erangel"></option>
+            </datalist>
+          </div>
+          <div class="form-group">
+            <label>Map (type any map)</label>
+            <input type="text" id="tMap" placeholder="e.g. Erangel, Livik, Miramar, Warehouse">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Date &amp; Time</label>
+          <input type="datetime-local" id="tDateTime">
+        </div>
+        <div class="row2">
+          <div class="form-group">
+            <label>Entry Fee (₹)</label>
+            <input type="number" id="tEntryFee" min="0" value="0">
+          </div>
+          <div class="form-group">
+            <label>Prize Pool (₹)</label>
+            <input type="number" id="tPrizePool" min="0" value="0">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="form-group">
+            <label>Max Players</label>
+            <input type="number" id="tMaxPlayers" min="2" value="100">
+          </div>
+          <div class="form-group">
+            <label>Room ID</label>
+            <input type="text" id="tRoomId" placeholder="Set before match">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Room Password</label>
+          <input type="text" id="tRoomPassword" placeholder="Set before match">
+        </div>
+        <div class="form-group">
+          <label>Tournament Photo (banner)</label>
+          <input type="file" id="tPhoto" accept="image/*">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveBtn">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== Edit User Modal ===== -->
+  <div class="modal-overlay" id="userModal">
+    <div class="modal">
+      <h2>Edit User</h2>
+      <div id="userModalMsg" class="form-msg"></div>
+      <form id="userForm">
+        <input type="hidden" id="uId">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="uFullName" required>
+        </div>
+        <div class="row2">
+          <div class="form-group">
+            <label>BGMI ID</label>
+            <input type="text" id="uBgmiId" pattern="\d{8,12}" title="8-12 digits" required>
+          </div>
+          <div class="form-group">
+            <label>In-Game Name</label>
+            <input type="text" id="uBgmiName" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="uEmail" required>
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" id="uPhone" pattern="\d{10}" title="10 digits" required>
+        </div>
+        <div class="form-group">
+          <label>New Password (leave empty to keep current)</label>
+          <input type="text" id="uPassword" placeholder="Optional — min 6 characters">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeUserModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== Declare Result Modal ===== -->
+  <div class="modal-overlay" id="resultModal">
+    <div class="modal" style="max-width:640px">
+      <h2 id="resultModalTitle">Declare Result</h2>
+      <div class="page-sub">Enter each player's final rank, kills and prize. Rank #1 is announced as the winner.</div>
+      <div id="resultModalMsg" class="form-msg"></div>
+      <form id="resultForm">
+        <input type="hidden" id="rTournamentId">
+        <div style="overflow-x:auto;margin-bottom:14px">
+          <table>
+            <thead><tr><th>Player</th><th>BGMI ID</th><th style="width:80px">Rank</th><th style="width:80px">Kills</th><th style="width:110px">Prize (₹)</th></tr></thead>
+            <tbody id="resultRows"></tbody>
+          </table>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeResultModal()">Cancel</button>
+          <button type="submit" class="btn btn-success">Announce Result</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const TYPE_LABELS = { '1v1': '1v1 TDM', '2v2': '2v2 TDM', 'erangel': 'Erangel Classic' };
+    const STATUS_LABELS = { upcoming: 'Upcoming', live: 'LIVE', completed: 'Completed' };
+    let tournaments = [];
+    let users = [];
+
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function fmtDate(dt) {
+      if (!dt) return '-';
+      const d = new Date(dt);
+      return isNaN(d) ? esc(dt) : d.toLocaleString('en-IN', {
+        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    // ---------- Auth ----------
+    async function checkAdmin() {
+      const res = await fetch('/api/admin/check');
+      const { isAdmin } = await res.json();
+      if (isAdmin) showPanel();
+    }
+
+    document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('loginMsg');
+      msg.className = 'form-msg';
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('adminUser').value.trim(),
+            password: document.getElementById('adminPass').value
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Login failed');
+        showPanel();
+      } catch (err) {
+        msg.className = 'form-msg error';
+        msg.textContent = err.message;
+      }
+    });
+
+    function showPanel() {
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('panelView').style.display = 'block';
+      loadAll();
+    }
+
+    async function adminLogout() {
+      await fetch('/api/admin/logout', { method: 'POST' });
+      location.reload();
+    }
+
+    // ---------- Views ----------
+    function switchView(view, btn) {
+      document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('view-tournaments').style.display = view === 'tournaments' ? 'block' : 'none';
+      document.getElementById('view-users').style.display = view === 'users' ? 'block' : 'none';
+    }
+
+    async function loadAll() {
+      await Promise.all([loadTournaments(), loadUsers()]);
+    }
+
+    // ---------- Tournaments ----------
+    async function loadTournaments() {
+      const res = await fetch('/api/admin/tournaments');
+      if (!res.ok) return;
+      tournaments = await res.json();
+
+      document.getElementById('statTournaments').textContent = tournaments.length;
+      document.getElementById('statLive').textContent =
+        tournaments.filter(t => (t.status || 'upcoming') === 'live').length;
+      document.getElementById('statJoins').textContent =
+        tournaments.reduce((n, t) => n + (t.players || []).length, 0);
+
+      document.getElementById('tournamentRows').innerHTML = tournaments.map(t => {
+        const status = t.status || 'upcoming';
+        return `
+        <tr>
+          <td>${t.photo ? `<img class="thumb" src="${esc(t.photo)}">` : '—'}</td>
+          <td><b>${esc(t.name)}</b><br><span style="color:var(--muted);font-size:0.78rem">${esc(t.map)}</span></td>
+          <td>${esc(TYPE_LABELS[t.type] || t.type)}</td>
+          <td>${fmtDate(t.dateTime)}</td>
+          <td>${esc(t.roomId) || '<span style="color:var(--muted)">not set</span>'}</td>
+          <td>${(t.players || []).length}/${t.maxPlayers}</td>
+          <td>
+            <span class="status-badge status-${status}">${STATUS_LABELS[status]}</span><br>
+            <select onchange="changeStatus('${t.id}', this.value)" style="margin-top:6px;background:var(--bg-2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 6px;font-size:0.8rem">
+              <option value="upcoming" ${status === 'upcoming' ? 'selected' : ''}>Upcoming</option>
+              <option value="live" ${status === 'live' ? 'selected' : ''}>Live</option>
+              <option value="completed" ${status === 'completed' ? 'selected' : ''}>Completed</option>
+            </select>
+          </td>
+          <td style="white-space:nowrap">
+            <button class="btn btn-outline btn-sm" onclick="openEdit('${t.id}')">Edit</button>
+            <button class="btn btn-success btn-sm" onclick="openResultModal('${t.id}')">Result</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteTournament('${t.id}')">Delete</button>
+          </td>
+        </tr>
+      `}).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No tournaments yet — create one!</td></tr>';
+    }
+
+    async function changeStatus(id, status) {
+      await fetch(`/api/admin/tournaments/${id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      loadTournaments();
+    }
+
+    // ---------- Users ----------
+    async function loadUsers() {
+      const res = await fetch('/api/admin/users');
+      if (!res.ok) return;
+      users = await res.json();
+      document.getElementById('statUsers').textContent = users.length;
+      document.getElementById('userRows').innerHTML = users.map((u, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${esc(u.fullName)}</td>
+          <td><b style="color:var(--orange)">${esc(u.bgmiId)}</b></td>
+          <td>${esc(u.bgmiName)}</td>
+          <td>${esc(u.email)}</td>
+          <td>${esc(u.phone)}</td>
+          <td>${fmtDate(u.registeredAt)}</td>
+          <td><button class="btn btn-outline btn-sm" onclick="openUserEdit('${u.id}')">Edit</button></td>
+        </tr>
+      `).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No users registered yet</td></tr>';
+    }
+
+    // ---------- Edit User modal ----------
+    const userModal = document.getElementById('userModal');
+
+    function openUserEdit(id) {
+      const u = users.find(x => x.id === id);
+      if (!u) return;
+      document.getElementById('userModalMsg').className = 'form-msg';
+      document.getElementById('uId').value = u.id;
+      document.getElementById('uFullName').value = u.fullName;
+      document.getElementById('uBgmiId').value = u.bgmiId;
+      document.getElementById('uBgmiName').value = u.bgmiName;
+      document.getElementById('uEmail').value = u.email;
+      document.getElementById('uPhone').value = u.phone;
+      document.getElementById('uPassword').value = '';
+      userModal.classList.add('open');
+    }
+    function closeUserModal() { userModal.classList.remove('open'); }
+    userModal.addEventListener('click', (e) => { if (e.target === userModal) closeUserModal(); });
+
+    document.getElementById('userForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('userModalMsg');
+      msg.className = 'form-msg';
+      try {
+        const res = await fetch(`/api/admin/users/${document.getElementById('uId').value}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fullName: document.getElementById('uFullName').value.trim(),
+            bgmiId: document.getElementById('uBgmiId').value.trim(),
+            bgmiName: document.getElementById('uBgmiName').value.trim(),
+            email: document.getElementById('uEmail').value.trim(),
+            phone: document.getElementById('uPhone').value.trim(),
+            password: document.getElementById('uPassword').value
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Save failed');
+        closeUserModal();
+        loadAll();
+      } catch (err) {
+        msg.className = 'form-msg error';
+        msg.textContent = err.message;
+      }
+    });
+
+    // ---------- Declare Result modal ----------
+    const resultModal = document.getElementById('resultModal');
+
+    function openResultModal(id) {
+      const t = tournaments.find(x => x.id === id);
+      if (!t) return;
+      const players = t.players || [];
+      document.getElementById('resultModalMsg').className = 'form-msg';
+      if (!players.length) {
+        alert('No players have joined this tournament yet.');
+        return;
+      }
+      document.getElementById('resultModalTitle').textContent = `Declare Result — ${t.name}`;
+      document.getElementById('rTournamentId').value = t.id;
+      const existing = t.results || [];
+      document.getElementById('resultRows').innerHTML = players.map(p => {
+        const r = existing.find(x => x.userId === p.userId) || {};
+        return `
+        <tr data-userid="${esc(p.userId)}">
+          <td>${esc(p.bgmiName)}</td>
+          <td>${esc(p.bgmiId)}</td>
+          <td><input type="number" class="r-pos" min="1" value="${r.position || ''}" placeholder="-" style="width:70px;padding:6px;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text)"></td>
+          <td><input type="number" class="r-kills" min="0" value="${r.kills ?? ''}" placeholder="0" style="width:70px;padding:6px;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text)"></td>
+          <td><input type="number" class="r-prize" min="0" value="${r.prizeWon ?? ''}" placeholder="0" style="width:95px;padding:6px;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text)"></td>
+        </tr>
+      `}).join('');
+      resultModal.classList.add('open');
+    }
+    function closeResultModal() { resultModal.classList.remove('open'); }
+    resultModal.addEventListener('click', (e) => { if (e.target === resultModal) closeResultModal(); });
+
+    document.getElementById('resultForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('resultModalMsg');
+      msg.className = 'form-msg';
+      const id = document.getElementById('rTournamentId').value;
+      const results = [...document.querySelectorAll('#resultRows tr')].map(tr => ({
+        userId: tr.dataset.userid,
+        position: tr.querySelector('.r-pos').value,
+        kills: tr.querySelector('.r-kills').value,
+        prizeWon: tr.querySelector('.r-prize').value
+      })).filter(r => r.position !== '');
+
+      if (!results.length) {
+        msg.className = 'form-msg error';
+        msg.textContent = 'Enter a rank for at least one player.';
+        return;
+      }
+      if (!results.some(r => Number(r.position) === 1)) {
+        msg.className = 'form-msg error';
+        msg.textContent = 'One player must have rank #1 (the winner).';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/admin/tournaments/${id}/results`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ results })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to save results');
+        closeResultModal();
+        loadTournaments();
+      } catch (err) {
+        msg.className = 'form-msg error';
+        msg.textContent = err.message;
+      }
+    });
+
+    // ---------- Tournament create/edit modal ----------
+    const modal = document.getElementById('modal');
+
+    function openCreate() {
+      document.getElementById('modalTitle').textContent = 'Create Tournament';
+      document.getElementById('tournamentForm').reset();
+      document.getElementById('tId').value = '';
+      document.getElementById('modalMsg').className = 'form-msg';
+      modal.classList.add('open');
+    }
+
+    function openEdit(id) {
+      const t = tournaments.find(x => x.id === id);
+      if (!t) return;
+      document.getElementById('modalTitle').textContent = 'Edit Tournament';
+      document.getElementById('modalMsg').className = 'form-msg';
+      document.getElementById('tId').value = t.id;
+      document.getElementById('tName').value = t.name;
+      document.getElementById('tType').value = t.type;
+      document.getElementById('tMap').value = t.map || '';
+      document.getElementById('tDateTime').value = (t.dateTime || '').slice(0, 16);
+      document.getElementById('tEntryFee').value = t.entryFee ?? 0;
+      document.getElementById('tPrizePool').value = t.prizePool ?? 0;
+      document.getElementById('tMaxPlayers').value = t.maxPlayers ?? 100;
+      document.getElementById('tRoomId').value = t.roomId || '';
+      document.getElementById('tRoomPassword').value = t.roomPassword || '';
+      document.getElementById('tPhoto').value = '';
+      modal.classList.add('open');
+    }
+
+    function closeModal() { modal.classList.remove('open'); }
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    document.getElementById('tournamentForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('modalMsg');
+      msg.className = 'form-msg';
+
+      const id = document.getElementById('tId').value;
+      const fd = new FormData();
+      fd.append('name', document.getElementById('tName').value.trim());
+      fd.append('type', document.getElementById('tType').value);
+      fd.append('map', document.getElementById('tMap').value.trim());
+      fd.append('dateTime', document.getElementById('tDateTime').value);
+      fd.append('entryFee', document.getElementById('tEntryFee').value);
+      fd.append('prizePool', document.getElementById('tPrizePool').value);
+      fd.append('maxPlayers', document.getElementById('tMaxPlayers').value);
+      fd.append('roomId', document.getElementById('tRoomId').value.trim());
+      fd.append('roomPassword', document.getElementById('tRoomPassword').value.trim());
+      const photo = document.getElementById('tPhoto').files[0];
+      if (photo) fd.append('photo', photo);
+
+      try {
+        const res = await fetch(id ? `/api/admin/tournaments/${id}` : '/api/admin/tournaments', {
+          method: id ? 'PUT' : 'POST',
+          body: fd
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Save failed');
+        closeModal();
+        loadTournaments();
+      } catch (err) {
+        msg.className = 'form-msg error';
+        msg.textContent = err.message;
+      }
+    });
+
+    async function deleteTournament(id) {
+      if (!confirm('Delete this tournament? This cannot be undone.')) return;
+      await fetch(`/api/admin/tournaments/${id}`, { method: 'DELETE' });
+      loadTournaments();
+    }
+
+    checkAdmin();
+  </script>
+</body>
+</html>

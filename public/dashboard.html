@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard — BGMI Tournament</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="logo">🎮 BGMI <span>TOURNAMENT</span></div>
+      <div class="nav-right">
+        <div class="user-chip" id="userChip">Loading...</div>
+        <button class="btn btn-outline btn-sm" onclick="openProfile()">Profile</button>
+        <button class="btn btn-outline btn-sm" onclick="logout()">Logout</button>
+      </div>
+    </nav>
+
+    <div class="container">
+      <div class="view-switch">
+        <button id="btnViewTournaments" class="active" onclick="switchView('tournaments')">🏆 Tournaments</button>
+        <button id="btnViewHistory" onclick="switchView('history')">📜 My Match History</button>
+      </div>
+
+      <!-- ===== Tournaments view ===== -->
+      <div id="view-tournaments">
+        <div class="page-title">Tournaments</div>
+        <div class="page-sub">Join a match, get the room ID &amp; password, and battle for the prize pool!</div>
+
+        <div class="tabs" id="tabs">
+          <div class="tab active" data-type="all">All</div>
+        </div>
+
+        <div class="t-grid" id="grid"></div>
+      </div>
+
+      <!-- ===== History view ===== -->
+      <div id="view-history" style="display: none">
+        <div class="page-title">My Match History</div>
+        <div class="page-sub">All the matches you have played or joined.</div>
+        <div style="overflow-x: auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Tournament</th>
+                <th>Type</th>
+                <th>Map</th>
+                <th>Date/Time</th>
+                <th>Status</th>
+                <th>My Rank</th>
+                <th>Kills</th>
+                <th>Prize Won</th>
+                <th>Winner</th>
+              </tr>
+            </thead>
+            <tbody id="historyRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Result modal ===== -->
+    <div class="modal-overlay" id="resultModal">
+      <div class="modal">
+        <h2 id="resultTitle">Match Result</h2>
+        <div id="resultBody"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-primary" onclick="closeResult()">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="profileModal">
+      <div class="modal">
+        <h2>My Profile</h2>
+        <div class="profile-grid">
+          <div class="profile-avatar" id="avatarPreview">👤</div>
+          <form id="profileForm" enctype="multipart/form-data">
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" id="profileFullName" placeholder="Your full name" required />
+            </div>
+            <div class="form-group">
+              <label>BGMI ID</label>
+              <input type="text" id="profileBgmiId" placeholder="e.g. 5123456789" />
+            </div>
+            <div class="form-group">
+              <label>BGMI Name</label>
+              <input type="text" id="profileBgmiName" placeholder="Your in-game name (IGN)" />
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="profileEmail" placeholder="you@example.com" disabled />
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <input type="password" id="profilePassword" placeholder="Leave blank to keep current password" />
+            </div>
+            <div class="form-group">
+              <label>Avatar</label>
+              <input type="file" id="profileAvatar" accept="image/*" />
+            </div>
+            <div class="form-msg" id="profileMsg"></div>
+            <div class="modal-actions">
+              <button type="button" class="btn btn-outline" onclick="closeProfile()">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save Profile</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const TYPE_LABELS = { "1v1": "1v1 TDM", "2v2": "2v2 TDM", erangel: "Erangel Classic" };
+      const STATUS_LABELS = { upcoming: "Upcoming", live: "LIVE", completed: "Completed" };
+      let tournaments = [];
+      let myId = null;
+      let activeType = "all";
+
+      function esc(s) {
+        return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      }
+      function fmtDate(dt) {
+        if (!dt) return "-";
+        const d = new Date(dt);
+        return isNaN(d)
+          ? esc(dt)
+          : d.toLocaleString("en-IN", {
+              day: "numeric",
+              month: "short",
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+      }
+      function statusBadge(s) {
+        return `<span class="status-badge status-${esc(s)}">${esc(STATUS_LABELS[s] || s)}</span>`;
+      }
+
+      async function loadMe() {
+        const res = await fetch("/api/me");
+        if (!res.ok) {
+          location.href = "login.html";
+          return;
+        }
+        const me = await res.json();
+        myId = me.id;
+        document.getElementById("userChip").innerHTML = `👤 <b>${esc(me.bgmiName)}</b> &nbsp;|&nbsp; ID: ${esc(me.bgmiId)}`;
+        window.currentUser = me;
+      }
+
+      function openProfile() {
+        if (!window.currentUser) return;
+        const me = window.currentUser;
+        document.getElementById("profileFullName").value = me.fullName || "";
+        document.getElementById("profileBgmiId").value = me.bgmiId || "";
+        document.getElementById("profileBgmiName").value = me.bgmiName || "";
+        document.getElementById("profileEmail").value = me.email || "";
+        document.getElementById("profilePassword").value = "";
+        document.getElementById("profileMsg").className = "form-msg";
+        if (me.avatar) {
+          document.getElementById("avatarPreview").style.backgroundImage = `url('${esc(me.avatar)}')`;
+          document.getElementById("avatarPreview").textContent = "";
+        } else {
+          document.getElementById("avatarPreview").style.backgroundImage = "none";
+          document.getElementById("avatarPreview").textContent = "👤";
+        }
+        document.getElementById("profileModal").classList.add("open");
+      }
+
+      function closeProfile() {
+        document.getElementById("profileModal").classList.remove("open");
+      }
+
+      document.getElementById("profileAvatar").addEventListener("change", function () {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          document.getElementById("avatarPreview").style.backgroundImage = `url('${reader.result}')`;
+          document.getElementById("avatarPreview").textContent = "";
+        };
+        reader.readAsDataURL(file);
+      });
+
+      document.getElementById("profileForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const form = document.getElementById("profileForm");
+        const formData = new FormData(form);
+        document.getElementById("profileMsg").className = "form-msg";
+        document.getElementById("profileMsg").textContent = "";
+        try {
+          // remove email from formData to prevent user-side email edits
+          formData.delete("profileEmail");
+          // but collect BGMI fields
+          // server expects fields named: fullName, bgmiId, bgmiName, password, avatar
+          formData.set("fullName", document.getElementById("profileFullName").value || "");
+          formData.set("bgmiId", document.getElementById("profileBgmiId").value || "");
+          formData.set("bgmiName", document.getElementById("profileBgmiName").value || "");
+
+          const res = await fetch("/api/me", {
+            method: "PUT",
+            body: formData,
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Unable to save profile");
+          window.currentUser = data.user;
+          document.getElementById("profileMsg").className = "form-msg success";
+          document.getElementById("profileMsg").textContent = "Profile updated successfully.";
+          document.getElementById("userChip").innerHTML = `👤 <b>${esc(data.user.bgmiName)}</b> &nbsp;|&nbsp; ID: ${esc(data.user.bgmiId)}`;
+        } catch (err) {
+          document.getElementById("profileMsg").className = "form-msg error";
+          document.getElementById("profileMsg").textContent = err.message;
+        }
+      });
+
+      async function loadTournaments() {
+        const res = await fetch("/api/tournaments");
+        if (!res.ok) {
+          location.href = "login.html";
+          return;
+        }
+        tournaments = await res.json();
+        buildTabs();
+        render();
+      }
+
+      // Build filter tabs from the tournament types the admin has created
+      function buildTabs() {
+        const types = [...new Set(tournaments.map((t) => t.type).filter(Boolean))];
+        if (!types.includes(activeType)) activeType = "all";
+        document.getElementById("tabs").innerHTML =
+          `<div class="tab ${activeType === "all" ? "active" : ""}" data-type="all">All</div>` +
+          types.map((ty) => `<div class="tab ${activeType === ty ? "active" : ""}" data-type="${esc(ty)}">${esc(TYPE_LABELS[ty] || ty)}</div>`).join("");
+      }
+
+      function cardButton(t) {
+        if (t.status === "completed") {
+          return `<button class="btn btn-outline btn-sm" style="width:100%" onclick="openResult('${t.id}')">🏆 VIEW RESULT</button>`;
+        }
+        if (t.status === "live") {
+          return `<button class="btn btn-danger btn-sm" style="width:100%" disabled>🔴 MATCH IN PROGRESS — JOINING CLOSED</button>`;
+        }
+        if (t.joined) {
+          return `<button class="btn btn-success btn-sm" style="width:100%" disabled>JOINED</button>`;
+        }
+        if (t.playersCount >= t.maxPlayers) {
+          return `<button class="btn btn-primary btn-sm" style="width:100%" disabled>FULL</button>`;
+        }
+        return `<button class="btn btn-primary btn-sm" style="width:100%" onclick="joinTournament('${t.id}')">JOIN NOW</button>`;
+      }
+
+      function render() {
+        const grid = document.getElementById("grid");
+        const list = tournaments.filter((t) => activeType === "all" || t.type === activeType);
+
+        if (!list.length) {
+          grid.innerHTML = `<div class="empty-state">
+          <div class="icon">🏆</div>
+          <div>No tournaments here yet. Check back soon!</div>
+        </div>`;
+          return;
+        }
+
+        grid.innerHTML = list
+          .map((t) => {
+            const winner = t.status === "completed" && (t.results || []).find((r) => Number(r.position) === 1);
+            return `
+        <div class="t-card">
+          <div class="photo" style="${t.photo ? `background-image:url('${esc(t.photo)}')` : ""}">
+            ${t.photo ? "" : "🎯"}
+            <div class="type-badge">${esc(TYPE_LABELS[t.type] || t.type)}</div>
+            <div class="status-corner">${statusBadge(t.status)}</div>
+          </div>
+          <div class="body">
+            <h3>${esc(t.name)}</h3>
+            <div class="t-meta">
+              <div>Map <b>${esc(t.map)}</b></div>
+              <div>Time <b>${fmtDate(t.dateTime)}</b></div>
+              <div>Entry Fee <b>${t.entryFee > 0 ? "₹" + t.entryFee : "FREE"}</b></div>
+              <div class="prize">Prize Pool <b>₹${t.prizePool}</b></div>
+              <div>Players <b>${t.playersCount}/${t.maxPlayers}</b></div>
+            </div>
+            ${
+              winner
+                ? `
+              <div class="room-box" style="border-color:var(--orange);background:rgba(245,166,35,0.08)">
+                🏆 Winner: <b style="color:var(--orange)">${esc(winner.bgmiName)}</b> (ID: ${esc(winner.bgmiId)})
+              </div>
+            `
+                : ""
+            }
+            ${
+              t.joined && t.status !== "completed"
+                ? `
+              <div class="room-box">
+                ✅ You joined!<br>
+                Room ID: <b>${t.roomId ? esc(t.roomId) : "Announced before match"}</b><br>
+                Password: <b>${t.roomPassword ? esc(t.roomPassword) : "—"}</b>
+              </div>
+            `
+                : ""
+            }
+            ${cardButton(t)}
+          </div>
+        </div>
+      `;
+          })
+          .join("");
+      }
+
+      // ---------- Result modal (winner announcement + leaderboard) ----------
+      function openResult(id) {
+        const t = tournaments.find((x) => x.id === id);
+        if (!t) return;
+        const results = t.results || [];
+        const winner = results.find((r) => Number(r.position) === 1);
+
+        document.getElementById("resultTitle").textContent = `Result — ${t.name}`;
+        document.getElementById("resultBody").innerHTML = `
+        ${
+          winner
+            ? `
+          <div class="winner-banner">
+            <div class="trophy">🏆</div>
+            <div class="w-name">${esc(winner.bgmiName)}</div>
+            <div class="w-sub">WINNER • BGMI ID: ${esc(winner.bgmiId)} • ${winner.kills} kills • Won ₹${winner.prizeWon}</div>
+          </div>
+        `
+            : '<div class="page-sub">Results will be announced soon.</div>'
+        }
+        ${
+          results.length
+            ? `
+          <div style="overflow-x:auto">
+            <table class="leaderboard">
+              <thead><tr><th>#</th><th>Player</th><th>BGMI ID</th><th>Kills</th><th>Prize</th></tr></thead>
+              <tbody>
+                ${results
+                  .map(
+                    (r) => `
+                  <tr class="${Number(r.position) === 1 ? "winner-row" : ""} ${r.userId === myId ? "me-row" : ""}">
+                    <td>${r.position || "-"}</td>
+                    <td>${esc(r.bgmiName)}${r.userId === myId ? ' <b style="color:var(--blue)">(You)</b>' : ""}</td>
+                    <td>${esc(r.bgmiId)}</td>
+                    <td>${r.kills}</td>
+                    <td>${r.prizeWon > 0 ? "₹" + r.prizeWon : "—"}</td>
+                  </tr>
+                `,
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          </div>
+        `
+            : ""
+        }
+      `;
+        document.getElementById("resultModal").classList.add("open");
+      }
+      function closeResult() {
+        document.getElementById("resultModal").classList.remove("open");
+      }
+      document.getElementById("resultModal").addEventListener("click", (e) => {
+        if (e.target === document.getElementById("resultModal")) closeResult();
+      });
+
+      // ---------- History ----------
+      async function loadHistory() {
+        const res = await fetch("/api/history");
+        if (!res.ok) return;
+        const history = await res.json();
+        document.getElementById("historyRows").innerHTML =
+          history
+            .map(
+              (h) => `
+        <tr>
+          <td><b>${esc(h.name)}</b></td>
+          <td>${esc(TYPE_LABELS[h.type] || h.type)}</td>
+          <td>${esc(h.map)}</td>
+          <td>${fmtDate(h.dateTime)}</td>
+          <td>${statusBadge(h.status)}</td>
+          <td>${h.myResult ? `<span class="result-chip ${Number(h.myResult.position) === 1 ? "win" : ""}">${Number(h.myResult.position) === 1 ? "🏆 " : ""}#${h.myResult.position}</span>` : "—"}</td>
+          <td>${h.myResult ? h.myResult.kills : "—"}</td>
+          <td>${h.myResult && h.myResult.prizeWon > 0 ? "₹" + h.myResult.prizeWon : "—"}</td>
+          <td>${h.winner ? esc(h.winner.bgmiName) : h.status === "completed" ? "—" : "Not decided"}</td>
+        </tr>
+      `,
+            )
+            .join("") || '<tr><td colspan="9" style="text-align:center;color:var(--muted)">You have not joined any match yet. Join a tournament to start your history!</td></tr>';
+      }
+
+      // ---------- View switch ----------
+      function switchView(view) {
+        document.getElementById("btnViewTournaments").classList.toggle("active", view === "tournaments");
+        document.getElementById("btnViewHistory").classList.toggle("active", view === "history");
+        document.getElementById("view-tournaments").style.display = view === "tournaments" ? "block" : "none";
+        document.getElementById("view-history").style.display = view === "history" ? "block" : "none";
+        if (view === "history") loadHistory();
+      }
+
+      async function joinTournament(id) {
+        try {
+          const res = await fetch(`/api/tournaments/${id}/join`, { method: "POST" });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Failed to join");
+          await loadTournaments();
+        } catch (err) {
+          alert(err.message);
+        }
+      }
+
+      async function logout() {
+        await fetch("/api/logout", { method: "POST" });
+        location.href = "login.html";
+      }
+
+      document.getElementById("tabs").addEventListener("click", (e) => {
+        const tab = e.target.closest(".tab");
+        if (!tab) return;
+        document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        activeType = tab.dataset.type;
+        render();
+      });
+
+      loadMe();
+      loadTournaments();
+      setInterval(loadTournaments, 30000); // refresh every 30s for room ID / status updates
+    </script>
+  </body>
+</html>

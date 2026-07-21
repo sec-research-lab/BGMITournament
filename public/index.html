@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BGMI Tournament</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card" style="text-align:center">
+      <div class="brand" style="font-size:2rem">🎮 BGMI <span>TOURNAMENT</span></div>
+      <div class="subtitle" style="margin-bottom:30px">
+        1v1 TDM • 2v2 TDM • Erangel Classic<br>
+        Register, join matches and win prize pools!
+      </div>
+      <a href="register.html" class="btn btn-primary" style="width:100%;margin-bottom:12px">REGISTER NOW</a>
+      <a href="login.html" class="btn btn-outline" style="width:100%">LOGIN</a>
+      <div class="auth-footer" style="margin-top:24px">
+        <a href="admin.html" style="color:var(--muted);font-size:0.8rem">Admin Portal →</a>
+      </div>
+    </div>
+  </div>
+  <script>
+    // If already logged in, go straight to the dashboard
+    fetch('/api/me').then(r => { if (r.ok) location.href = 'dashboard.html'; });
+  </script>
+</body>
+</html>

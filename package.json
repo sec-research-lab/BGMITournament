@@ -1,0 +1,14 @@
+{
+  "name": "bgmi-tournament",
+  "version": "1.0.0",
+  "description": "BGMI Tournament website with user registration and admin portal",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "multer": "^2.2.0"
+  }
+}

@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BGMI Tournament</title>
+<style>
+/* ===== BGMI Tournament — dark gaming theme (single-file static build) ===== */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d0f14;--bg-2:#151923;--card:#1a1f2b;--card-2:#212836;--border:#2c3547;
+  --orange:#f5a623;--orange-2:#ff7a00;--text:#e8eaf0;--muted:#8b94a7;
+  --green:#35c759;--red:#ff453a;--blue:#4da3ff;
+}
+body{font-family:"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+a{color:var(--orange);text-decoration:none;cursor:pointer}
+a:hover{text-decoration:underline}
+
+.screen{display:none}
+.screen.active{display:block}
+
+/* Navbar */
+.navbar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:linear-gradient(180deg,#161b26,#12151d);border-bottom:2px solid var(--orange);position:sticky;top:0;z-index:50}
+.navbar .logo{font-size:1.35rem;font-weight:800;letter-spacing:1px;color:var(--text)}
+.navbar .logo span{color:var(--orange)}
+.navbar .nav-right{display:flex;align-items:center;gap:14px}
+.navbar .user-chip{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:.85rem;color:var(--muted)}
+.navbar .user-chip b{color:var(--orange)}
+
+/* Buttons */
+.btn{display:inline-block;padding:10px 22px;border:none;border-radius:8px;font-size:.95rem;font-weight:700;cursor:pointer;transition:transform .1s,opacity .15s}
+.btn:hover{opacity:.9;transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn-primary{background:linear-gradient(135deg,var(--orange),var(--orange-2));color:#14100a}
+.btn-outline{background:transparent;color:var(--orange);border:1.5px solid var(--orange)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-success{background:var(--green);color:#06210d}
+.btn-sm{padding:6px 14px;font-size:.82rem}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+/* Auth pages */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:30px 16px;background:radial-gradient(ellipse at 20% 10%,rgba(245,166,35,.1),transparent 50%),radial-gradient(ellipse at 80% 90%,rgba(255,122,0,.08),transparent 50%),var(--bg)}
+.auth-card{width:100%;max-width:440px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:34px 30px;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.auth-card .brand{text-align:center;font-size:1.6rem;font-weight:800;margin-bottom:4px}
+.auth-card .brand span{color:var(--orange)}
+.auth-card .subtitle{text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:26px}
+
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:.82rem;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group select{width:100%;padding:11px 14px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.95rem;outline:none;transition:border-color .15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--orange)}
+.form-group input[type=file]{padding:8px}
+
+.form-msg{display:none;margin:12px 0;padding:10px 14px;border-radius:8px;font-size:.88rem}
+.form-msg.error{display:block;background:rgba(255,69,58,.12);color:var(--red);border:1px solid rgba(255,69,58,.4)}
+.form-msg.success{display:block;background:rgba(53,199,89,.12);color:var(--green);border:1px solid rgba(53,199,89,.4)}
+
+.auth-footer{text-align:center;margin-top:18px;font-size:.88rem;color:var(--muted)}
+
+/* Dashboard */
+.container{max-width:1200px;margin:0 auto;padding:28px 20px}
+.page-title{font-size:1.5rem;font-weight:800;margin-bottom:4px}
+.page-sub{color:var(--muted);font-size:.92rem;margin-bottom:24px}
+
+.tabs{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap}
+.tab{padding:9px 20px;background:var(--card);border:1px solid var(--border);border-radius:20px;color:var(--muted);font-weight:600;font-size:.88rem;cursor:pointer;transition:all .15s}
+.tab.active{background:linear-gradient(135deg,var(--orange),var(--orange-2));color:#14100a;border-color:var(--orange)}
+
+.t-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+.t-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:transform .15s,border-color .15s}
+.t-card:hover{transform:translateY(-3px);border-color:var(--orange)}
+.t-card .photo{height:150px;background:var(--card-2);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:2.2rem;position:relative}
+.t-card .type-badge{position:absolute;top:10px;left:10px;background:rgba(13,15,20,.85);border:1px solid var(--orange);color:var(--orange);font-size:.72rem;font-weight:800;padding:4px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:.6px}
+.t-card .body{padding:16px}
+.t-card h3{font-size:1.05rem;margin-bottom:10px}
+.t-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-bottom:12px}
+.t-meta div{font-size:.82rem;color:var(--muted)}
+.t-meta b{color:var(--text);display:block;font-size:.9rem}
+.t-meta .prize b{color:var(--orange)}
+
+.room-box{background:rgba(53,199,89,.08);border:1px dashed var(--green);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:.85rem}
+.room-box b{color:var(--green)}
+
+.empty-state{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-state .icon{font-size:3rem;margin-bottom:12px}
+
+/* Admin */
+.admin-layout{display:flex;min-height:calc(100vh - 62px)}
+.sidebar{width:210px;background:var(--bg-2);border-right:1px solid var(--border);padding:20px 12px;flex-shrink:0}
+.sidebar button{display:block;width:100%;text-align:left;padding:11px 14px;margin-bottom:6px;background:transparent;border:none;border-radius:8px;color:var(--muted);font-size:.92rem;font-weight:600;cursor:pointer}
+.sidebar button.active{background:var(--card);color:var(--orange)}
+.sidebar button:hover{color:var(--text)}
+.admin-content{flex:1;padding:26px;overflow-x:auto}
+
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden}
+th,td{padding:12px 14px;text-align:left;font-size:.88rem;border-bottom:1px solid var(--border)}
+th{background:var(--card-2);color:var(--orange);text-transform:uppercase;font-size:.75rem;letter-spacing:.6px}
+tr:last-child td{border-bottom:none}
+td .thumb{width:56px;height:36px;object-fit:cover;border-radius:6px}
+
+.stat-row{display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap}
+.stat-card{flex:1;min-width:160px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.stat-card .num{font-size:1.8rem;font-weight:800;color:var(--orange)}
+.stat-card .lbl{font-size:.82rem;color:var(--muted);margin-top:2px}
+
+.status-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px}
+.status-upcoming{background:rgba(77,163,255,.15);color:var(--blue);border:1px solid rgba(77,163,255,.5)}
+.status-live{background:rgba(255,69,58,.15);color:var(--red);border:1px solid rgba(255,69,58,.5);animation:pulse 1.2s infinite}
+.status-completed{background:rgba(53,199,89,.15);color:var(--green);border:1px solid rgba(53,199,89,.5)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+
+.t-card .status-corner{position:absolute;top:10px;right:10px}
+
+.winner-banner{background:linear-gradient(135deg,rgba(245,166,35,.15),rgba(255,122,0,.08));border:1px solid var(--orange);border-radius:10px;padding:14px 16px;margin-bottom:16px;text-align:center}
+.winner-banner .trophy{font-size:1.8rem}
+.winner-banner .w-name{font-size:1.15rem;font-weight:800;color:var(--orange)}
+.winner-banner .w-sub{font-size:.82rem;color:var(--muted);margin-top:2px}
+
+.leaderboard tr.winner-row td{background:rgba(245,166,35,.1)}
+.leaderboard tr.winner-row td:first-child{color:var(--orange);font-weight:800}
+.leaderboard tr.me-row td{background:rgba(77,163,255,.08)}
+
+.view-switch{display:flex;gap:10px;margin-bottom:22px}
+.view-switch button{flex:1;max-width:220px;padding:11px 18px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--muted);font-weight:700;font-size:.92rem;cursor:pointer}
+.view-switch button.active{border-color:var(--orange);color:var(--orange);background:var(--card-2)}
+
+.result-chip{font-weight:700}
+.result-chip.win{color:var(--orange)}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{width:100%;max-width:520px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:26px}
+.modal h2{margin-bottom:18px;font-size:1.2rem}
+.modal .row2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
+
+.profile-grid{display:grid;gap:18px}
+.profile-avatar{width:120px;height:120px;border-radius:20px;background:var(--bg-2) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:3rem;border:2px dashed var(--border)}
+
+.static-note{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 16px}
+
+@media (max-width:720px){
+  .admin-layout{flex-direction:column}
+  .sidebar{width:100%;display:flex;gap:6px;padding:10px}
+  .sidebar button{width:auto;margin-bottom:0}
+  .modal .row2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== LANDING ===================== -->
+<div class="screen active" id="screen-landing">
+  <div class="auth-wrap">
+    <div class="auth-card" style="text-align:center">
+      <div class="brand" style="font-size:2rem">🎮 BGMI <span>TOURNAMENT</span></div>
+      <div class="subtitle" style="margin-bottom:30px">
+        1v1 TDM • 2v2 TDM • Erangel Classic<br>
+        Register, join matches and win prize pools!
+      </div>
+      <a class="btn btn-primary" style="width:100%;margin-bottom:12px" onclick="goRegister()">REGISTER NOW</a>
+      <a class="btn btn-outline" style="width:100%" onclick="goLogin()">LOGIN</a>
+      <div class="auth-footer" style="margin-top:24px">
+        <a style="color:var(--muted);font-size:.8rem" onclick="enterAdmin()">Admin Portal →</a>
+      </div>
+    </div>
+  </div>
+  <div class="static-note">Static demo build — all data is stored locally in this browser (localStorage), no server required.</div>
+</div>
+
+<!-- ===================== REGISTER ===================== -->
+<div class="screen" id="screen-register">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="brand">🎮 BGMI <span>TOURNAMENT</span></div>
+      <div class="subtitle">Create your player account</div>
+      <div id="registerMsg" class="form-msg"></div>
+      <form id="registerForm">
+        <div class="form-group"><label>Full Name</label><input type="text" id="regFullName" placeholder="Your real name" required></div>
+        <div class="form-group"><label>BGMI ID (Character ID)</label><input type="text" id="regBgmiId" placeholder="e.g. 5123456789" pattern="\d{8,12}" title="8-12 digits" required></div>
+        <div class="form-group"><label>BGMI In-Game Name</label><input type="text" id="regBgmiName" placeholder="Your in-game name (IGN)" required></div>
+        <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="you@example.com" required></div>
+        <div class="form-group"><label>Phone Number</label><input type="tel" id="regPhone" placeholder="10-digit mobile number" pattern="\d{10}" title="10 digits" required></div>
+        <div class="form-group"><label>Password</label><input type="password" id="regPassword" placeholder="Minimum 6 characters" minlength="6" required></div>
+        <button type="submit" class="btn btn-primary" style="width:100%">REGISTER</button>
+      </form>
+      <div class="auth-footer">Already have an account? <a onclick="goLogin()">Login here</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== LOGIN ===================== -->
+<div class="screen" id="screen-login">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="brand">🎮 BGMI <span>TOURNAMENT</span></div>
+      <div class="subtitle">Login with your BGMI ID</div>
+      <div id="loginMsg" class="form-msg"></div>
+      <form id="loginForm">
+        <div class="form-group"><label>BGMI ID</label><input type="text" id="loginBgmiId" placeholder="Your BGMI Character ID" required></div>
+        <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="Your password" required></div>
+        <button type="submit" class="btn btn-primary" style="width:100%">LOGIN</button>
+      </form>
+      <div class="auth-footer">
+        New player? <a onclick="goRegister()">Register here</a><br><br>
+        <a style="color:var(--muted);font-size:.8rem" onclick="enterAdmin()">Admin Portal →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== DASHBOARD ===================== -->
+<div class="screen" id="screen-dashboard">
+  <nav class="navbar">
+    <div class="logo">🎮 BGMI <span>TOURNAMENT</span></div>
+    <div class="nav-right">
+      <div class="user-chip" id="userChip">Loading...</div>
+      <button class="btn btn-outline btn-sm" onclick="openProfile()">Profile</button>
+      <button class="btn btn-outline btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="view-switch">
+      <button id="btnViewTournaments" class="active" onclick="switchDashView('tournaments')">🏆 Tournaments</button>
+      <button id="btnViewHistory" onclick="switchDashView('history')">📜 My Match History</button>
+    </div>
+
+    <div id="view-tournaments">
+      <div class="page-title">Tournaments</div>
+      <div class="page-sub">Join a match, get the room ID &amp; password, and battle for the prize pool!</div>
+      <div class="tabs" id="tabs"><div class="tab active" data-type="all">All</div></div>
+      <div class="t-grid" id="grid"></div>
+    </div>
+
+    <div id="view-history" style="display:none">
+      <div class="page-title">My Match History</div>
+      <div class="page-sub">All the matches you have played or joined.</div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Tournament</th><th>Type</th><th>Map</th><th>Date/Time</th><th>Status</th><th>My Rank</th><th>Kills</th><th>Prize Won</th><th>Winner</th></tr></thead>
+          <tbody id="historyRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ADMIN LOGIN ===================== -->
+<div class="screen" id="screen-admin-login">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="brand">🛡️ ADMIN <span>PORTAL</span></div>
+      <div class="subtitle">BGMI Tournament management</div>
+      <div id="adminLoginMsg" class="form-msg"></div>
+      <form id="adminLoginForm">
+        <div class="form-group"><label>Username</label><input type="text" id="adminUser" required></div>
+        <div class="form-group"><label>Password</label><input type="password" id="adminPass" required></div>
+        <button type="submit" class="btn btn-primary" style="width:100%">LOGIN AS ADMIN</button>
+      </form>
+      <div class="auth-footer"><a onclick="goLanding()">← Back to home</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ADMIN PANEL ===================== -->
+<div class="screen" id="screen-admin-panel">
+  <nav class="navbar">
+    <div class="logo">🛡️ ADMIN <span>PORTAL</span></div>
+    <div class="nav-right"><button class="btn btn-outline btn-sm" onclick="adminLogout()">Logout</button></div>
+  </nav>
+
+  <div class="admin-layout">
+    <div class="sidebar">
+      <button class="active" data-view="tournaments" onclick="switchAdminView('tournaments', this)">🏆 Tournaments</button>
+      <button data-view="users" onclick="switchAdminView('users', this)">👥 Registered Users</button>
+    </div>
+
+    <div class="admin-content">
+      <div id="admin-view-tournaments">
+        <div class="stat-row">
+          <div class="stat-card"><div class="num" id="statTournaments">0</div><div class="lbl">Tournaments</div></div>
+          <div class="stat-card"><div class="num" id="statLive">0</div><div class="lbl">Live Matches</div></div>
+          <div class="stat-card"><div class="num" id="statUsers">0</div><div class="lbl">Registered Users</div></div>
+          <div class="stat-card"><div class="num" id="statJoins">0</div><div class="lbl">Total Joins</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="page-title" style="margin:0">Tournaments</div>
+          <button class="btn btn-primary" onclick="openCreateTournament()">+ Create Tournament</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Photo</th><th>Name</th><th>Type</th><th>Date/Time</th><th>Room ID</th><th>Players</th><th>Match Status</th><th>Actions</th></tr></thead>
+            <tbody id="tournamentRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="admin-view-users" style="display:none">
+        <div class="page-title" style="margin-bottom:16px">Registered Users</div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>#</th><th>Full Name</th><th>BGMI ID</th><th>In-Game Name</th><th>Email</th><th>Phone</th><th>Registered On</th><th>Actions</th></tr></thead>
+            <tbody id="userRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+
+<!-- Dashboard: view result -->
+<div class="modal-overlay" id="viewResultModal">
+  <div class="modal">
+    <h2 id="viewResultTitle">Match Result</h2>
+    <div id="viewResultBody"></div>
+    <div class="modal-actions"><button type="button" class="btn btn-primary" onclick="closeViewResult()">Close</button></div>
+  </div>
+</div>
+
+<!-- Dashboard: profile -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal">
+    <h2>My Profile</h2>
+    <div class="profile-grid">
+      <div class="profile-avatar" id="avatarPreview">👤</div>
+      <form id="profileForm">
+        <div class="form-group"><label>Full Name</label><input type="text" id="profileFullName" required></div>
+        <div class="form-group"><label>BGMI ID</label><input type="text" id="profileBgmiId" pattern="\d{8,12}" title="8-12 digits"></div>
+        <div class="form-group"><label>BGMI Name</label><input type="text" id="profileBgmiName"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="profileEmail" disabled></div>
+        <div class="form-group"><label>Password</label><input type="password" id="profilePassword" placeholder="Leave blank to keep current password"></div>
+        <div class="form-group"><label>Avatar</label><input type="file" id="profileAvatar" accept="image/*"></div>
+        <div class="form-msg" id="profileMsg"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeProfile()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Admin: create/edit tournament -->
+<div class="modal-overlay" id="tournamentModal">
+  <div class="modal">
+    <h2 id="tournamentModalTitle">Create Tournament</h2>
+    <div id="tournamentModalMsg" class="form-msg"></div>
+    <form id="tournamentForm">
+      <input type="hidden" id="tId">
+      <div class="form-group"><label>Tournament Name</label><input type="text" id="tName" placeholder="e.g. Sunday Showdown" required></div>
+      <div class="row2">
+        <div class="form-group">
+          <label>Type (any mode you want)</label>
+          <input type="text" id="tType" placeholder="e.g. 1v1, 2v2, Squad, Erangel" list="typeSuggestions">
+          <datalist id="typeSuggestions">
+            <option value="1v1"></option><option value="2v2"></option><option value="4v4"></option>
+            <option value="Squad"></option><option value="Duo"></option><option value="Solo"></option><option value="Erangel"></option>
+          </datalist>
+        </div>
+        <div class="form-group"><label>Map (type any map)</label><input type="text" id="tMap" placeholder="e.g. Erangel, Livik, Miramar, Warehouse"></div>
+      </div>
+      <div class="form-group"><label>Date &amp; Time</label><input type="datetime-local" id="tDateTime"></div>
+      <div class="row2">
+        <div class="form-group"><label>Entry Fee (₹)</label><input type="number" id="tEntryFee" min="0" value="0"></div>
+        <div class="form-group"><label>Prize Pool (₹)</label><input type="number" id="tPrizePool" min="0" value="0"></div>
+      </div>
+      <div class="row2">
+        <div class="form-group"><label>Max Players</label><input type="number" id="tMaxPlayers" min="2" value="100"></div>
+        <div class="form-group"><label>Room ID</label><input type="text" id="tRoomId" placeholder="Set before match"></div>
+      </div>
+      <div class="form-group"><label>Room Password</label><input type="text" id="tRoomPassword" placeholder="Set before match"></div>
+      <div class="form-group"><label>Tournament Photo (banner)</label><input type="file" id="tPhoto" accept="image/*"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" onclick="closeTournamentModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Admin: edit user -->
+<div class="modal-overlay" id="adminUserModal">
+  <div class="modal">
+    <h2>Edit User</h2>
+    <div id="adminUserModalMsg" class="form-msg"></div>
+    <form id="adminUserForm">
+      <input type="hidden" id="uId">
+      <div class="form-group"><label>Full Name</label><input type="text" id="uFullName" required></div>
+      <div class="row2">
+        <div class="form-group"><label>BGMI ID</label><input type="text" id="uBgmiId" pattern="\d{8,12}" title="8-12 digits" required></div>
+        <div class="form-group"><label>In-Game Name</label><input type="text" id="uBgmiName" required></div>
+      </div>
+      <div class="form-group"><label>Email</label><input type="email" id="uEmail" required></div>
+      <div class="form-group"><label>Phone</label><input type="tel" id="uPhone" pattern="\d{10}" title="10 digits" required></div>
+      <div class="form-group"><label>New Password (leave empty to keep current)</label><input type="text" id="uPassword" placeholder="Optional — min 6 characters"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" onclick="closeAdminUserModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Admin: declare result -->
+<div class="modal-overlay" id="declareResultModal">
+  <div class="modal" style="max-width:640px">
+    <h2 id="declareResultTitle">Declare Result</h2>
+    <div class="page-sub">Enter each player's final rank, kills and prize. Rank #1 is announced as the winner.</div>
+    <div id="declareResultMsg" class="form-msg"></div>
+    <form id="declareResultForm">
+      <input type="hidden" id="rTournamentId">
+      <div style="overflow-x:auto;margin-bottom:14px">
+        <table>
+          <thead><tr><th>Player</th><th>BGMI ID</th><th style="width:80px">Rank</th><th style="width:80px">Kills</th><th style="width:110px">Prize (₹)</th></tr></thead>
+          <tbody id="declareResultRows"></tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" onclick="closeDeclareResultModal()">Cancel</button>
+        <button type="submit" class="btn btn-success">Announce Result</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const TYPE_LABELS = { '1v1': '1v1 TDM', '2v2': '2v2 TDM', erangel: 'Erangel Classic' };
+const STATUS_LABELS = { upcoming: 'Upcoming', live: 'LIVE', completed: 'Completed' };
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'admin123';
+
+function genId() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function fmtDate(dt) {
+  if (!dt) return '-';
+  const d = new Date(dt);
+  return isNaN(d) ? esc(dt) : d.toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------- storage ---------- */
+function loadUsers() { return JSON.parse(localStorage.getItem('bgmi_users') || '[]'); }
+function saveUsers(u) { localStorage.setItem('bgmi_users', JSON.stringify(u)); }
+function loadTournaments() { return JSON.parse(localStorage.getItem('bgmi_tournaments') || '[]'); }
+function saveTournaments(t) { localStorage.setItem('bgmi_tournaments', JSON.stringify(t)); }
+function getSession() { return localStorage.getItem('bgmi_session'); }
+function setSession(id) { id ? localStorage.setItem('bgmi_session', id) : localStorage.removeItem('bgmi_session'); }
+function isAdminSession() { return localStorage.getItem('bgmi_admin') === 'true'; }
+function setAdminSession(v) { v ? localStorage.setItem('bgmi_admin', 'true') : localStorage.removeItem('bgmi_admin'); }
+function currentUser() {
+  const id = getSession();
+  if (!id) return null;
+  return loadUsers().find(u => u.id === id) || null;
+}
+
+/* ---------- screen routing ---------- */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goLanding() { showScreen('screen-landing'); }
+function goRegister() { showScreen('screen-register'); }
+function goLogin() { showScreen('screen-login'); }
+function goDashboard() {
+  if (!getSession()) { goLogin(); return; }
+  showScreen('screen-dashboard');
+  renderUserChip();
+  loadTournamentsView();
+}
+function enterAdmin() { isAdminSession() ? goAdminPanel() : showScreen('screen-admin-login'); }
+function goAdminPanel() {
+  if (!isAdminSession()) { showScreen('screen-admin-login'); return; }
+  showScreen('screen-admin-panel');
+  loadAdminAll();
+}
+
+/* ---------- register ---------- */
+document.getElementById('registerForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('registerMsg');
+  msg.className = 'form-msg';
+  const fullName = document.getElementById('regFullName').value.trim();
+  const bgmiId = document.getElementById('regBgmiId').value.trim();
+  const bgmiName = document.getElementById('regBgmiName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const phone = document.getElementById('regPhone').value.trim();
+  const password = document.getElementById('regPassword').value;
+
+  const users = loadUsers();
+  if (users.some(u => u.bgmiId === bgmiId)) { msg.className = 'form-msg error'; msg.textContent = 'This BGMI ID is already registered.'; return; }
+  if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) { msg.className = 'form-msg error'; msg.textContent = 'This email is already registered.'; return; }
+
+  const user = { id: genId(), fullName, bgmiId, bgmiName, email, phone, password, avatar: null, registeredAt: new Date().toISOString() };
+  users.push(user);
+  saveUsers(users);
+  setSession(user.id);
+  msg.className = 'form-msg success';
+  msg.textContent = 'Registration successful! Redirecting to dashboard...';
+  document.getElementById('registerForm').reset();
+  setTimeout(goDashboard, 700);
+});
+
+/* ---------- login ---------- */
+document.getElementById('loginForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('loginMsg');
+  msg.className = 'form-msg';
+  const bgmiId = document.getElementById('loginBgmiId').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const user = loadUsers().find(u => u.bgmiId === bgmiId && u.password === password);
+  if (!user) { msg.className = 'form-msg error'; msg.textContent = 'Invalid BGMI ID or password.'; return; }
+  setSession(user.id);
+  document.getElementById('loginForm').reset();
+  goDashboard();
+});
+
+function logout() { setSession(null); goLanding(); }
+
+/* ---------- dashboard: tournaments view ---------- */
+let dashActiveType = 'all';
+
+function renderUserChip() {
+  const me = currentUser();
+  if (!me) { goLogin(); return; }
+  document.getElementById('userChip').innerHTML = `👤 <b>${esc(me.bgmiName)}</b> &nbsp;|&nbsp; ID: ${esc(me.bgmiId)}`;
+}
+
+function switchDashView(view) {
+  document.getElementById('btnViewTournaments').classList.toggle('active', view === 'tournaments');
+  document.getElementById('btnViewHistory').classList.toggle('active', view === 'history');
+  document.getElementById('view-tournaments').style.display = view === 'tournaments' ? 'block' : 'none';
+  document.getElementById('view-history').style.display = view === 'history' ? 'block' : 'none';
+  if (view === 'history') loadHistoryView();
+}
+
+function buildTabs(tournaments) {
+  const types = [...new Set(tournaments.map(t => t.type).filter(Boolean))];
+  if (!types.includes(dashActiveType)) dashActiveType = 'all';
+  document.getElementById('tabs').innerHTML =
+    `<div class="tab ${dashActiveType === 'all' ? 'active' : ''}" data-type="all">All</div>` +
+    types.map(ty => `<div class="tab ${dashActiveType === ty ? 'active' : ''}" data-type="${esc(ty)}">${esc(TYPE_LABELS[ty] || ty)}</div>`).join('');
+}
+
+function cardButton(t, joined) {
+  if (t.status === 'completed') return `<button class="btn btn-outline btn-sm" style="width:100%" onclick="openViewResult('${t.id}')">🏆 VIEW RESULT</button>`;
+  if (t.status === 'live') return `<button class="btn btn-danger btn-sm" style="width:100%" disabled>🔴 MATCH IN PROGRESS — JOINING CLOSED</button>`;
+  if (joined) return `<button class="btn btn-success btn-sm" style="width:100%" disabled>JOINED</button>`;
+  if ((t.players || []).length >= t.maxPlayers) return `<button class="btn btn-primary btn-sm" style="width:100%" disabled>FULL</button>`;
+  return `<button class="btn btn-primary btn-sm" style="width:100%" onclick="joinTournament('${t.id}')">JOIN NOW</button>`;
+}
+
+function loadTournamentsView() {
+  const tournaments = loadTournaments();
+  buildTabs(tournaments);
+  renderGrid(tournaments);
+}
+
+function renderGrid(tournaments) {
+  const me = currentUser();
+  const grid = document.getElementById('grid');
+  const list = tournaments.filter(t => dashActiveType === 'all' || t.type === dashActiveType);
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-state"><div class="icon">🏆</div><div>No tournaments here yet. Check back soon!</div></div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(t => {
+    const joined = me && (t.players || []).some(p => p.userId === me.id);
+    const myJoin = me && (t.players || []).find(p => p.userId === me.id);
+    const winner = t.status === 'completed' && (t.results || []).find(r => Number(r.position) === 1);
+    return `
+      <div class="t-card">
+        <div class="photo" style="${t.photo ? `background-image:url('${t.photo}')` : ''}">
+          ${t.photo ? '' : '🎯'}
+          <div class="type-badge">${esc(TYPE_LABELS[t.type] || t.type)}</div>
+          <div class="status-corner">${statusBadge(t.status)}</div>
+        </div>
+        <div class="body">
+          <h3>${esc(t.name)}</h3>
+          <div class="t-meta">
+            <div>Map <b>${esc(t.map)}</b></div>
+            <div>Time <b>${fmtDate(t.dateTime)}</b></div>
+            <div>Entry Fee <b>${t.entryFee > 0 ? '₹' + t.entryFee : 'FREE'}</b></div>
+            <div class="prize">Prize Pool <b>₹${t.prizePool}</b></div>
+            <div>Players <b>${(t.players || []).length}/${t.maxPlayers}</b></div>
+          </div>
+          ${winner ? `<div class="room-box" style="border-color:var(--orange);background:rgba(245,166,35,0.08)">🏆 Winner: <b style="color:var(--orange)">${esc(winner.bgmiName)}</b> (ID: ${esc(winner.bgmiId)})</div>` : ''}
+          ${joined && t.status !== 'completed' ? `<div class="room-box">✅ You joined!<br>Room ID: <b>${t.roomId ? esc(t.roomId) : 'Announced before match'}</b><br>Password: <b>${t.roomPassword ? esc(t.roomPassword) : '—'}</b></div>` : ''}
+          ${cardButton(t, joined)}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function statusBadge(s) { return `<span class="status-badge status-${esc(s)}">${esc(STATUS_LABELS[s] || s)}</span>`; }
+
+document.getElementById('tabs').addEventListener('click', (e) => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  dashActiveType = tab.dataset.type;
+  loadTournamentsView();
+});
+
+function joinTournament(id) {
+  const me = currentUser();
+  if (!me) return;
+  const tournaments = loadTournaments();
+  const t = tournaments.find(x => x.id === id);
+  if (!t || t.status !== 'upcoming') return;
+  t.players = t.players || [];
+  if (t.players.some(p => p.userId === me.id)) return;
+  if (t.players.length >= t.maxPlayers) { alert('This tournament is full.'); return; }
+  t.players.push({ userId: me.id, bgmiId: me.bgmiId, bgmiName: me.bgmiName, joinedAt: new Date().toISOString() });
+  saveTournaments(tournaments);
+  loadTournamentsView();
+}
+
+function openViewResult(id) {
+  const t = loadTournaments().find(x => x.id === id);
+  if (!t) return;
+  const me = currentUser();
+  const results = t.results || [];
+  const winner = results.find(r => Number(r.position) === 1);
+  document.getElementById('viewResultTitle').textContent = `Result — ${t.name}`;
+  document.getElementById('viewResultBody').innerHTML = `
+    ${winner ? `<div class="winner-banner"><div class="trophy">🏆</div><div class="w-name">${esc(winner.bgmiName)}</div><div class="w-sub">WINNER • BGMI ID: ${esc(winner.bgmiId)} • ${winner.kills} kills • Won ₹${winner.prizeWon}</div></div>` : '<div class="page-sub">Results will be announced soon.</div>'}
+    ${results.length ? `<div style="overflow-x:auto"><table class="leaderboard"><thead><tr><th>#</th><th>Player</th><th>BGMI ID</th><th>Kills</th><th>Prize</th></tr></thead><tbody>
+      ${results.map(r => `<tr class="${Number(r.position) === 1 ? 'winner-row' : ''} ${me && r.userId === me.id ? 'me-row' : ''}">
+        <td>${r.position || '-'}</td><td>${esc(r.bgmiName)}${me && r.userId === me.id ? ' <b style="color:var(--blue)">(You)</b>' : ''}</td>
+        <td>${esc(r.bgmiId)}</td><td>${r.kills}</td><td>${r.prizeWon > 0 ? '₹' + r.prizeWon : '—'}</td></tr>`).join('')}
+      </tbody></table></div>` : ''}`;
+  document.getElementById('viewResultModal').classList.add('open');
+}
+function closeViewResult() { document.getElementById('viewResultModal').classList.remove('open'); }
+document.getElementById('viewResultModal').addEventListener('click', (e) => { if (e.target.id === 'viewResultModal') closeViewResult(); });
+
+/* ---------- dashboard: history view ---------- */
+function loadHistoryView() {
+  const me = currentUser();
+  if (!me) return;
+  const history = loadTournaments()
+    .filter(t => (t.players || []).some(p => p.userId === me.id))
+    .map(t => {
+      const results = t.results || [];
+      const winner = results.find(r => Number(r.position) === 1);
+      const myResult = results.find(r => r.userId === me.id);
+      return { ...t, winner, myResult };
+    });
+
+  document.getElementById('historyRows').innerHTML = history.map(h => `
+    <tr>
+      <td><b>${esc(h.name)}</b></td>
+      <td>${esc(TYPE_LABELS[h.type] || h.type)}</td>
+      <td>${esc(h.map)}</td>
+      <td>${fmtDate(h.dateTime)}</td>
+      <td>${statusBadge(h.status)}</td>
+      <td>${h.myResult ? `<span class="result-chip ${Number(h.myResult.position) === 1 ? 'win' : ''}">${Number(h.myResult.position) === 1 ? '🏆 ' : ''}#${h.myResult.position}</span>` : '—'}</td>
+      <td>${h.myResult ? h.myResult.kills : '—'}</td>
+      <td>${h.myResult && h.myResult.prizeWon > 0 ? '₹' + h.myResult.prizeWon : '—'}</td>
+      <td>${h.winner ? esc(h.winner.bgmiName) : h.status === 'completed' ? '—' : 'Not decided'}</td>
+    </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--muted)">You have not joined any match yet. Join a tournament to start your history!</td></tr>';
+}
+
+/* ---------- dashboard: profile ---------- */
+let profileAvatarDataUrl = null;
+
+function openProfile() {
+  const me = currentUser();
+  if (!me) return;
+  document.getElementById('profileFullName').value = me.fullName || '';
+  document.getElementById('profileBgmiId').value = me.bgmiId || '';
+  document.getElementById('profileBgmiName').value = me.bgmiName || '';
+  document.getElementById('profileEmail').value = me.email || '';
+  document.getElementById('profilePassword').value = '';
+  document.getElementById('profileMsg').className = 'form-msg';
+  profileAvatarDataUrl = me.avatar || null;
+  const preview = document.getElementById('avatarPreview');
+  if (me.avatar) { preview.style.backgroundImage = `url('${me.avatar}')`; preview.textContent = ''; }
+  else { preview.style.backgroundImage = 'none'; preview.textContent = '👤'; }
+  document.getElementById('profileModal').classList.add('open');
+}
+function closeProfile() { document.getElementById('profileModal').classList.remove('open'); }
+
+document.getElementById('profileAvatar').addEventListener('change', async function () {
+  const file = this.files[0];
+  if (!file) return;
+  profileAvatarDataUrl = await readFileAsDataUrl(file);
+  const preview = document.getElementById('avatarPreview');
+  preview.style.backgroundImage = `url('${profileAvatarDataUrl}')`;
+  preview.textContent = '';
+});
+
+document.getElementById('profileForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('profileMsg');
+  msg.className = 'form-msg';
+  const me = currentUser();
+  if (!me) return;
+  const bgmiId = document.getElementById('profileBgmiId').value.trim();
+  const users = loadUsers();
+  if (bgmiId && users.some(u => u.id !== me.id && u.bgmiId === bgmiId)) {
+    msg.className = 'form-msg error'; msg.textContent = 'That BGMI ID is already used by another player.'; return;
+  }
+  const idx = users.findIndex(u => u.id === me.id);
+  users[idx] = {
+    ...users[idx],
+    fullName: document.getElementById('profileFullName').value.trim() || users[idx].fullName,
+    bgmiId: bgmiId || users[idx].bgmiId,
+    bgmiName: document.getElementById('profileBgmiName').value.trim() || users[idx].bgmiName,
+    password: document.getElementById('profilePassword').value || users[idx].password,
+    avatar: profileAvatarDataUrl,
+  };
+  saveUsers(users);
+  msg.className = 'form-msg success';
+  msg.textContent = 'Profile updated successfully.';
+  renderUserChip();
+});
+
+/* ---------- admin: login/logout ---------- */
+document.getElementById('adminLoginForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('adminLoginMsg');
+  msg.className = 'form-msg';
+  const username = document.getElementById('adminUser').value.trim();
+  const password = document.getElementById('adminPass').value;
+  if (username === ADMIN_USER && password === ADMIN_PASS) {
+    setAdminSession(true);
+    document.getElementById('adminLoginForm').reset();
+    goAdminPanel();
+  } else {
+    msg.className = 'form-msg error'; msg.textContent = 'Invalid admin credentials';
+  }
+});
+function adminLogout() { setAdminSession(false); showScreen('screen-admin-login'); }
+
+function switchAdminView(view, btn) {
+  document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('admin-view-tournaments').style.display = view === 'tournaments' ? 'block' : 'none';
+  document.getElementById('admin-view-users').style.display = view === 'users' ? 'block' : 'none';
+}
+
+function loadAdminAll() { loadAdminTournaments(); loadAdminUsers(); }
+
+/* ---------- admin: tournaments ---------- */
+function loadAdminTournaments() {
+  const tournaments = loadTournaments();
+  const users = loadUsers();
+  document.getElementById('statTournaments').textContent = tournaments.length;
+  document.getElementById('statLive').textContent = tournaments.filter(t => (t.status || 'upcoming') === 'live').length;
+  document.getElementById('statUsers').textContent = users.length;
+  document.getElementById('statJoins').textContent = tournaments.reduce((n, t) => n + (t.players || []).length, 0);
+
+  document.getElementById('tournamentRows').innerHTML = tournaments.map(t => {
+    const status = t.status || 'upcoming';
+    return `
+    <tr>
+      <td>${t.photo ? `<img class="thumb" src="${t.photo}">` : '—'}</td>
+      <td><b>${esc(t.name)}</b><br><span style="color:var(--muted);font-size:0.78rem">${esc(t.map)}</span></td>
+      <td>${esc(TYPE_LABELS[t.type] || t.type)}</td>
+      <td>${fmtDate(t.dateTime)}</td>
+      <td>${t.roomId ? esc(t.roomId) : '<span style="color:var(--muted)">not set</span>'}</td>
+      <td>${(t.players || []).length}/${t.maxPlayers}</td>
+      <td>
+        <span class="status-badge status-${status}">${STATUS_LABELS[status]}</span><br>
+        <select onchange="changeStatus('${t.id}', this.value)" style="margin-top:6px;background:var(--bg-2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 6px;font-size:0.8rem">
+          <option value="upcoming" ${status === 'upcoming' ? 'selected' : ''}>Upcoming</option>
+          <option value="live" ${status === 'live' ? 'selected' : ''}>Live</option>
+          <option value="completed" ${status === 'completed' ? 'selected' : ''}>Completed</option>
+        </select>
+      </td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="openEditTournament('${t.id}')">Edit</button>
+        <button class="btn btn-success btn-sm" onclick="openDeclareResult('${t.id}')">Result</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTournament('${t.id}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No tournaments yet — create one!</td></tr>';
+}
+
+function changeStatus(id, status) {
+  const tournaments = loadTournaments();
+  const t = tournaments.find(x => x.id === id);
+  if (!t) return;
+  t.status = status;
+  saveTournaments(tournaments);
+  loadAdminTournaments();
+}
+
+function deleteTournament(id) {
+  if (!confirm('Delete this tournament? This cannot be undone.')) return;
+  saveTournaments(loadTournaments().filter(t => t.id !== id));
+  loadAdminTournaments();
+}
+
+let tournamentPhotoDataUrl = null;
+
+function openCreateTournament() {
+  document.getElementById('tournamentModalTitle').textContent = 'Create Tournament';
+  document.getElementById('tournamentForm').reset();
+  document.getElementById('tId').value = '';
+  document.getElementById('tournamentModalMsg').className = 'form-msg';
+  tournamentPhotoDataUrl = null;
+  document.getElementById('tournamentModal').classList.add('open');
+}
+
+function openEditTournament(id) {
+  const t = loadTournaments().find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('tournamentModalTitle').textContent = 'Edit Tournament';
+  document.getElementById('tournamentModalMsg').className = 'form-msg';
+  document.getElementById('tId').value = t.id;
+  document.getElementById('tName').value = t.name;
+  document.getElementById('tType').value = t.type;
+  document.getElementById('tMap').value = t.map || '';
+  document.getElementById('tDateTime').value = (t.dateTime || '').slice(0, 16);
+  document.getElementById('tEntryFee').value = t.entryFee ?? 0;
+  document.getElementById('tPrizePool').value = t.prizePool ?? 0;
+  document.getElementById('tMaxPlayers').value = t.maxPlayers ?? 100;
+  document.getElementById('tRoomId').value = t.roomId || '';
+  document.getElementById('tRoomPassword').value = t.roomPassword || '';
+  document.getElementById('tPhoto').value = '';
+  tournamentPhotoDataUrl = t.photo || null;
+  document.getElementById('tournamentModal').classList.add('open');
+}
+
+function closeTournamentModal() { document.getElementById('tournamentModal').classList.remove('open'); }
+document.getElementById('tournamentModal').addEventListener('click', (e) => { if (e.target.id === 'tournamentModal') closeTournamentModal(); });
+
+document.getElementById('tPhoto').addEventListener('change', async function () {
+  const file = this.files[0];
+  if (!file) return;
+  tournamentPhotoDataUrl = await readFileAsDataUrl(file);
+});
+
+document.getElementById('tournamentForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('tournamentModalMsg');
+  msg.className = 'form-msg';
+  const id = document.getElementById('tId').value;
+  const tournaments = loadTournaments();
+
+  const fields = {
+    name: document.getElementById('tName').value.trim(),
+    type: document.getElementById('tType').value.trim(),
+    map: document.getElementById('tMap').value.trim(),
+    dateTime: document.getElementById('tDateTime').value,
+    entryFee: Number(document.getElementById('tEntryFee').value) || 0,
+    prizePool: Number(document.getElementById('tPrizePool').value) || 0,
+    maxPlayers: Number(document.getElementById('tMaxPlayers').value) || 100,
+    roomId: document.getElementById('tRoomId').value.trim(),
+    roomPassword: document.getElementById('tRoomPassword').value.trim(),
+    photo: tournamentPhotoDataUrl,
+  };
+
+  if (!fields.name) { msg.className = 'form-msg error'; msg.textContent = 'Tournament name is required.'; return; }
+
+  if (id) {
+    const idx = tournaments.findIndex(t => t.id === id);
+    if (idx === -1) return;
+    tournaments[idx] = { ...tournaments[idx], ...fields };
+  } else {
+    tournaments.push({
+      id: genId(), ...fields,
+      players: [], results: [], status: 'upcoming', createdAt: new Date().toISOString(),
+    });
+  }
+  saveTournaments(tournaments);
+  closeTournamentModal();
+  loadAdminTournaments();
+});
+
+/* ---------- admin: declare result ---------- */
+function openDeclareResult(id) {
+  const t = loadTournaments().find(x => x.id === id);
+  if (!t) return;
+  const players = t.players || [];
+  document.getElementById('declareResultMsg').className = 'form-msg';
+  if (!players.length) { alert('No players have joined this tournament yet.'); return; }
+  document.getElementById('declareResultTitle').textContent = `Declare Result — ${t.name}`;
+  document.getElementById('rTournamentId').value = t.id;
+  const existing = t.results || [];
+  document.getElementById('declareResultRows').innerHTML = players.map(p => {
+    const r = existing.find(x => x.userId === p.userId) || {};
+    return `
+    <tr data-userid="${esc(p.userId)}">
+      <td>${esc(p.bgmiName)}</td>
+      <td>${esc(p.bgmiId)}</td>
+      <td><input type="number" class="r-pos" min="1" value="${r.position || ''}" placeholder="-" style="width:70px;padding:6px;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text)"></td>
+      <td><input type="number" class="r-kills" min="0" value="${r.kills ?? ''}" placeholder="0" style="width:70px;padding:6px;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text)"></td>
+      <td><input type="number" class="r-prize" min="0" value="${r.prizeWon ?? ''}" placeholder="0" style="width:95px;padding:6px;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text)"></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('declareResultModal').classList.add('open');
+}
+function closeDeclareResultModal() { document.getElementById('declareResultModal').classList.remove('open'); }
+document.getElementById('declareResultModal').addEventListener('click', (e) => { if (e.target.id === 'declareResultModal') closeDeclareResultModal(); });
+
+document.getElementById('declareResultForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('declareResultMsg');
+  msg.className = 'form-msg';
+  const id = document.getElementById('rTournamentId').value;
+  const rows = [...document.querySelectorAll('#declareResultRows tr')].map(tr => ({
+    userId: tr.dataset.userid,
+    bgmiId: tr.children[1].textContent,
+    bgmiName: tr.children[0].textContent,
+    position: tr.querySelector('.r-pos').value,
+    kills: Number(tr.querySelector('.r-kills').value) || 0,
+    prizeWon: Number(tr.querySelector('.r-prize').value) || 0,
+  })).filter(r => r.position !== '');
+
+  if (!rows.length) { msg.className = 'form-msg error'; msg.textContent = 'Enter a rank for at least one player.'; return; }
+  if (!rows.some(r => Number(r.position) === 1)) { msg.className = 'form-msg error'; msg.textContent = 'One player must have rank #1 (the winner).'; return; }
+
+  const tournaments = loadTournaments();
+  const t = tournaments.find(x => x.id === id);
+  if (!t) return;
+  t.results = rows;
+  saveTournaments(tournaments);
+  closeDeclareResultModal();
+  loadAdminTournaments();
+});
+
+/* ---------- admin: users ---------- */
+function loadAdminUsers() {
+  const users = loadUsers();
+  document.getElementById('statUsers').textContent = users.length;
+  document.getElementById('userRows').innerHTML = users.map((u, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${esc(u.fullName)}</td>
+      <td><b style="color:var(--orange)">${esc(u.bgmiId)}</b></td>
+      <td>${esc(u.bgmiName)}</td>
+      <td>${esc(u.email)}</td>
+      <td>${esc(u.phone)}</td>
+      <td>${fmtDate(u.registeredAt)}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="openAdminUserEdit('${u.id}')">Edit</button></td>
+    </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No users registered yet</td></tr>';
+}
+
+function openAdminUserEdit(id) {
+  const u = loadUsers().find(x => x.id === id);
+  if (!u) return;
+  document.getElementById('adminUserModalMsg').className = 'form-msg';
+  document.getElementById('uId').value = u.id;
+  document.getElementById('uFullName').value = u.fullName;
+  document.getElementById('uBgmiId').value = u.bgmiId;
+  document.getElementById('uBgmiName').value = u.bgmiName;
+  document.getElementById('uEmail').value = u.email;
+  document.getElementById('uPhone').value = u.phone;
+  document.getElementById('uPassword').value = '';
+  document.getElementById('adminUserModal').classList.add('open');
+}
+function closeAdminUserModal() { document.getElementById('adminUserModal').classList.remove('open'); }
+document.getElementById('adminUserModal').addEventListener('click', (e) => { if (e.target.id === 'adminUserModal') closeAdminUserModal(); });
+
+document.getElementById('adminUserForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('adminUserModalMsg');
+  msg.className = 'form-msg';
+  const id = document.getElementById('uId').value;
+  const users = loadUsers();
+  const idx = users.findIndex(u => u.id === id);
+  if (idx === -1) return;
+
+  const bgmiId = document.getElementById('uBgmiId').value.trim();
+  const email = document.getElementById('uEmail').value.trim();
+  if (users.some(u => u.id !== id && u.bgmiId === bgmiId)) { msg.className = 'form-msg error'; msg.textContent = 'That BGMI ID is already used by another player.'; return; }
+  if (users.some(u => u.id !== id && u.email.toLowerCase() === email.toLowerCase())) { msg.className = 'form-msg error'; msg.textContent = 'That email is already used by another player.'; return; }
+
+  const newPassword = document.getElementById('uPassword').value;
+  users[idx] = {
+    ...users[idx],
+    fullName: document.getElementById('uFullName').value.trim(),
+    bgmiId, bgmiName: document.getElementById('uBgmiName').value.trim(),
+    email, phone: document.getElementById('uPhone').value.trim(),
+    password: newPassword ? newPassword : users[idx].password,
+  };
+  saveUsers(users);
+  closeAdminUserModal();
+  loadAdminAll();
+});
+
+/* ---------- cross-tab sync ---------- */
+window.addEventListener('storage', (e) => {
+  if (e.key === 'bgmi_tournaments') {
+    if (document.getElementById('screen-dashboard').classList.contains('active')) {
+      loadTournamentsView();
+      if (document.getElementById('view-history').style.display !== 'none') loadHistoryView();
+    }
+    if (document.getElementById('screen-admin-panel').classList.contains('active')) loadAdminTournaments();
+  }
+  if (e.key === 'bgmi_users' && document.getElementById('screen-admin-panel').classList.contains('active')) loadAdminUsers();
+});
+
+/* ---------- init ---------- */
+if (getSession()) goDashboard(); else goLanding();
+</script>
+</body>
+</html>

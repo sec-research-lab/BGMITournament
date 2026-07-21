@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — BGMI Tournament</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="brand">🎮 BGMI <span>TOURNAMENT</span></div>
+      <div class="subtitle">Create your player account</div>
+
+      <div id="msg" class="form-msg"></div>
+
+      <form id="registerForm">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="fullName" placeholder="Your real name" required>
+        </div>
+        <div class="form-group">
+          <label>BGMI ID (Character ID)</label>
+          <input type="text" id="bgmiId" placeholder="e.g. 5123456789" pattern="\d{8,12}" title="8-12 digits" required>
+        </div>
+        <div class="form-group">
+          <label>BGMI In-Game Name</label>
+          <input type="text" id="bgmiName" placeholder="Your in-game name (IGN)" required>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="email" placeholder="you@example.com" required>
+        </div>
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input type="tel" id="phone" placeholder="10-digit mobile number" pattern="\d{10}" title="10 digits" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="password" placeholder="Minimum 6 characters" minlength="6" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%">REGISTER</button>
+      </form>
+
+      <div class="auth-footer">
+        Already have an account? <a href="login.html">Login here</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const msg = document.getElementById('msg');
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.className = 'form-msg';
+      const body = {
+        fullName: document.getElementById('fullName').value.trim(),
+        bgmiId: document.getElementById('bgmiId').value.trim(),
+        bgmiName: document.getElementById('bgmiName').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        password: document.getElementById('password').value
+      };
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Registration failed');
+        msg.className = 'form-msg success';
+        msg.textContent = 'Registration successful! Redirecting to dashboard...';
+        setTimeout(() => location.href = 'dashboard.html', 900);
+      } catch (err) {
+        msg.className = 'form-msg error';
+        msg.textContent = err.message;
+      }
+    });
+  </script>
+</body>
+</html>
