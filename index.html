@@ -153,19 +153,16 @@ td .thumb{width:56px;height:36px;object-fit:cover;border-radius:6px}
 <div class="screen active" id="screen-landing">
   <div class="auth-wrap">
     <div class="auth-card" style="text-align:center">
-      <div class="brand" style="font-size:2rem">🎮 BGMI <span>TOURNAMENT</span></div>
+      <div class="brand" style="font-size:2rem;cursor:pointer" onclick="enterAdmin()">🎮 BGMI <span>TOURNAMENT</span></div>
       <div class="subtitle" style="margin-bottom:30px">
         1v1 TDM • 2v2 TDM • Erangel Classic<br>
         Register, join matches and win prize pools!
       </div>
       <a class="btn btn-primary" style="width:100%;margin-bottom:12px" onclick="goRegister()">REGISTER NOW</a>
       <a class="btn btn-outline" style="width:100%" onclick="goLogin()">LOGIN</a>
-      <div class="auth-footer" style="margin-top:24px">
-        <a style="color:var(--muted);font-size:.8rem" onclick="enterAdmin()">Admin Portal →</a>
-      </div>
     </div>
   </div>
-  <div class="static-note">Static demo build — all data is stored locally in this browser (localStorage), no server required.</div>
+  <div class="static-note">Static demo build — all data is stored locally in this browser (localStorage), no server required.<br>For the real live tournament site with shared data, visit <a href="https://bgmitournament.onrender.com/" target="_blank" rel="noopener">bgmitournament.onrender.com</a>.</div>
 </div>
 
 <!-- ===================== REGISTER ===================== -->
