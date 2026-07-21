@@ -604,6 +604,17 @@ td .thumb {
   border: 2px dashed var(--border);
 }
 
+.version-tag {
+  position: fixed;
+  bottom: 6px;
+  right: 10px;
+  font-size: 0.7rem;
+  color: var(--muted);
+  opacity: 0.6;
+  z-index: 40;
+  pointer-events: none;
+}
+
 @media (max-width: 720px) {
   .admin-layout {
     flex-direction: column;

@@ -138,6 +138,7 @@ td .thumb{width:56px;height:36px;object-fit:cover;border-radius:6px}
 .profile-avatar{width:120px;height:120px;border-radius:20px;background:var(--bg-2) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:3rem;border:2px dashed var(--border)}
 
 .static-note{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 16px}
+.version-tag{position:fixed;bottom:6px;right:10px;font-size:.7rem;color:var(--muted);opacity:.6;z-index:40;pointer-events:none}
 
 @media (max-width:720px){
   .admin-layout{flex-direction:column}
@@ -1013,5 +1014,6 @@ window.addEventListener('storage', (e) => {
 /* ---------- init ---------- */
 if (getSession()) goDashboard(); else goLanding();
 </script>
+<div class="version-tag">bgmi v1.0.0</div>
 </body>
 </html>
