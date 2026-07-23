@@ -7,6 +7,13 @@
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
+    <div class="bg-slideshow">
+      <div class="bg-slide" style="background-image:url('https://upload.wikimedia.org/wikipedia/commons/6/6b/Blackpink_PUBG_Mobile.png')"></div>
+      <div class="bg-slide" style="background-image:url('https://upload.wikimedia.org/wikipedia/commons/b/bd/BLACKPINK_PUBG_Mobile_Sept_2020_ad.png')"></div>
+      <div class="bg-slide" style="background-image:url('https://upload.wikimedia.org/wikipedia/commons/e/ee/BLACKPINK_PUBG_Mobile_Sept_2020_ad_%28derived%29.jpg')"></div>
+      <div class="bg-slide" style="background-image:url('https://upload.wikimedia.org/wikipedia/commons/c/c2/BLACKPINK-inspired_PUBG_Mobile_incentives.png')"></div>
+      <div class="bg-scrim"></div>
+    </div>
     <nav class="navbar">
       <div class="logo">🎮 BGMI <span>TOURNAMENT</span></div>
       <div class="nav-right">
@@ -20,6 +27,7 @@
       <div class="view-switch">
         <button id="btnViewTournaments" class="active" onclick="switchView('tournaments')">🏆 Tournaments</button>
         <button id="btnViewHistory" onclick="switchView('history')">📜 My Match History</button>
+        <button id="btnViewReports" onclick="switchView('reports')">🚩 My Reports</button>
       </div>
 
       <!-- ===== Tournaments view ===== -->
@@ -54,6 +62,27 @@
               </tr>
             </thead>
             <tbody id="historyRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== Reports view ===== -->
+      <div id="view-reports" style="display: none">
+        <div class="page-title">My Reports</div>
+        <div class="page-sub">Reports you've filed about cheating, server errors, or other issues during a match.</div>
+        <div style="overflow-x: auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Tournament</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Filed</th>
+                <th>Status</th>
+                <th>Credits Refunded</th>
+              </tr>
+            </thead>
+            <tbody id="reportRows"></tbody>
           </table>
         </div>
       </div>
@@ -110,6 +139,37 @@
       </div>
     </div>
 
+    <!-- ===== Report an issue modal ===== -->
+    <div class="modal-overlay" id="reportModal">
+      <div class="modal">
+        <h2 id="reportModalTitle">Report an Issue</h2>
+        <div id="reportModalMsg" class="form-msg"></div>
+        <form id="reportForm">
+          <input type="hidden" id="reportTournamentId" />
+          <div class="form-group">
+            <label>Issue Type</label>
+            <select id="reportType" required>
+              <option value="cheating">Cheating by another player</option>
+              <option value="server_error">Server error (couldn't join / play)</option>
+              <option value="other">Other issue</option>
+            </select>
+          </div>
+          <div class="form-group" id="reportedPlayerGroup">
+            <label>Accused Player's BGMI ID or Name (optional)</label>
+            <input type="text" id="reportedBgmiId" placeholder="e.g. 5123456789 or their IGN" />
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="reportDescription" rows="4" placeholder="Describe what happened..." required style="width:100%;padding:11px 14px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.95rem;font-family:inherit;resize:vertical"></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-outline" onclick="closeReportModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Submit Report</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <script>
       const TYPE_LABELS = { "1v1": "1v1 TDM", "2v2": "2v2 TDM", erangel: "Erangel Classic" };
       const STATUS_LABELS = { upcoming: "Upcoming", live: "LIVE", completed: "Completed" };
@@ -144,8 +204,13 @@
         }
         const me = await res.json();
         myId = me.id;
-        document.getElementById("userChip").innerHTML = `👤 <b>${esc(me.bgmiName)}</b> &nbsp;|&nbsp; ID: ${esc(me.bgmiId)}`;
+        renderUserChip(me);
         window.currentUser = me;
+      }
+
+      function renderUserChip(me) {
+        document.getElementById("userChip").innerHTML =
+          `👤 <b>${esc(me.bgmiName)}</b> &nbsp;|&nbsp; ID: ${esc(me.bgmiId)} &nbsp;|&nbsp; 💰 <b style="color:var(--green)">${Number(me.credits) || 0}</b> credits`;
       }
 
       function openProfile() {
@@ -206,7 +271,7 @@
           window.currentUser = data.user;
           document.getElementById("profileMsg").className = "form-msg success";
           document.getElementById("profileMsg").textContent = "Profile updated successfully.";
-          document.getElementById("userChip").innerHTML = `👤 <b>${esc(data.user.bgmiName)}</b> &nbsp;|&nbsp; ID: ${esc(data.user.bgmiId)}`;
+          renderUserChip(data.user);
         } catch (err) {
           document.getElementById("profileMsg").className = "form-msg error";
           document.getElementById("profileMsg").textContent = err.message;
@@ -276,7 +341,7 @@
             <div class="t-meta">
               <div>Map <b>${esc(t.map)}</b></div>
               <div>Time <b>${fmtDate(t.dateTime)}</b></div>
-              <div>Entry Fee <b>${t.entryFee > 0 ? "₹" + t.entryFee : "FREE"}</b></div>
+              <div>Entry Fee <b>${t.entryFee > 0 ? t.entryFee + " credits" : "FREE"}</b></div>
               <div class="prize">Prize Pool <b>₹${t.prizePool}</b></div>
               <div>Players <b>${t.playersCount}/${t.maxPlayers}</b></div>
             </div>
@@ -301,6 +366,9 @@
                 : ""
             }
             ${cardButton(t)}
+            <div style="text-align:center;margin-top:8px">
+              <a style="font-size:0.78rem;color:var(--muted)" onclick="openReportModal('${t.id}')">🚩 Report an issue with this match</a>
+            </div>
           </div>
         </div>
       `;
@@ -393,9 +461,12 @@
       function switchView(view) {
         document.getElementById("btnViewTournaments").classList.toggle("active", view === "tournaments");
         document.getElementById("btnViewHistory").classList.toggle("active", view === "history");
+        document.getElementById("btnViewReports").classList.toggle("active", view === "reports");
         document.getElementById("view-tournaments").style.display = view === "tournaments" ? "block" : "none";
         document.getElementById("view-history").style.display = view === "history" ? "block" : "none";
+        document.getElementById("view-reports").style.display = view === "reports" ? "block" : "none";
         if (view === "history") loadHistory();
+        if (view === "reports") loadReports();
       }
 
       async function joinTournament(id) {
@@ -403,10 +474,74 @@
           const res = await fetch(`/api/tournaments/${id}/join`, { method: "POST" });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || "Failed to join");
-          await loadTournaments();
+          await Promise.all([loadTournaments(), loadMe()]);
         } catch (err) {
           alert(err.message);
         }
+      }
+
+      // ---------- Report an issue ----------
+      function openReportModal(tournamentId) {
+        document.getElementById("reportTournamentId").value = tournamentId;
+        document.getElementById("reportForm").reset();
+        document.getElementById("reportModalMsg").className = "form-msg";
+        document.getElementById("reportModal").classList.add("open");
+      }
+      function closeReportModal() {
+        document.getElementById("reportModal").classList.remove("open");
+      }
+      document.getElementById("reportModal").addEventListener("click", (e) => {
+        if (e.target.id === "reportModal") closeReportModal();
+      });
+
+      document.getElementById("reportForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const msg = document.getElementById("reportModalMsg");
+        msg.className = "form-msg";
+        try {
+          const res = await fetch("/api/reports", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tournamentId: document.getElementById("reportTournamentId").value,
+              type: document.getElementById("reportType").value,
+              reportedBgmiId: document.getElementById("reportedBgmiId").value.trim(),
+              description: document.getElementById("reportDescription").value.trim(),
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Failed to submit report");
+          msg.className = "form-msg success";
+          msg.textContent = "Report submitted. The admin will review it.";
+          setTimeout(closeReportModal, 900);
+        } catch (err) {
+          msg.className = "form-msg error";
+          msg.textContent = err.message;
+        }
+      });
+
+      const REPORT_TYPE_LABELS = { cheating: "Cheating", server_error: "Server Error", other: "Other" };
+      const REPORT_STATUS_LABELS = { pending: "Pending", approved: "Approved", rejected: "Rejected" };
+
+      async function loadReports() {
+        const res = await fetch("/api/reports");
+        if (!res.ok) return;
+        const reports = await res.json();
+        document.getElementById("reportRows").innerHTML =
+          reports
+            .map(
+              (r) => `
+        <tr>
+          <td><b>${esc(r.tournamentName)}</b></td>
+          <td>${esc(REPORT_TYPE_LABELS[r.type] || r.type)}</td>
+          <td>${esc(r.description)}</td>
+          <td>${fmtDate(r.createdAt)}</td>
+          <td><span class="status-badge status-${r.status === "approved" ? "completed" : r.status === "rejected" ? "live" : "upcoming"}">${esc(REPORT_STATUS_LABELS[r.status] || r.status)}</span></td>
+          <td>${r.creditsRefunded > 0 ? r.creditsRefunded : "—"}</td>
+        </tr>
+      `,
+            )
+            .join("") || '<tr><td colspan="6" style="text-align:center;color:var(--muted)">You haven\'t filed any reports.</td></tr>';
       }
 
       async function logout() {

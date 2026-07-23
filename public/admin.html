@@ -42,6 +42,7 @@
       <div class="sidebar">
         <button class="active" data-view="tournaments" onclick="switchView('tournaments', this)">🏆 Tournaments</button>
         <button data-view="users" onclick="switchView('users', this)">👥 Registered Users</button>
+        <button data-view="reports" onclick="switchView('reports', this)">🚩 Reports</button>
       </div>
 
       <div class="admin-content">
@@ -52,6 +53,7 @@
             <div class="stat-card"><div class="num" id="statLive">0</div><div class="lbl">Live Matches</div></div>
             <div class="stat-card"><div class="num" id="statUsers">0</div><div class="lbl">Registered Users</div></div>
             <div class="stat-card"><div class="num" id="statJoins">0</div><div class="lbl">Total Joins</div></div>
+            <div class="stat-card"><div class="num" id="statPendingReports">0</div><div class="lbl">Pending Reports</div></div>
           </div>
 
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -80,10 +82,27 @@
               <thead>
                 <tr>
                   <th>#</th><th>Full Name</th><th>BGMI ID</th><th>In-Game Name</th>
-                  <th>Email</th><th>Phone</th><th>Registered On</th><th>Actions</th>
+                  <th>Email</th><th>Phone</th><th>Credits</th><th>Registered On</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody id="userRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Reports view -->
+        <div id="view-reports" style="display:none">
+          <div class="page-title" style="margin-bottom:16px">Reports</div>
+          <div class="page-sub">Cheating, server errors, and other issues players have reported. Approving refunds the credits they spent joining that match.</div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Player</th><th>Tournament</th><th>Type</th><th>Accused</th><th>Description</th>
+                  <th>Filed</th><th>Status</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="reportRows"></tbody>
             </table>
           </div>
         </div>
@@ -127,7 +146,7 @@
         </div>
         <div class="row2">
           <div class="form-group">
-            <label>Entry Fee (₹)</label>
+            <label>Entry Fee (credits)</label>
             <input type="number" id="tEntryFee" min="0" value="0">
           </div>
           <div class="form-group">
@@ -288,10 +307,11 @@
       btn.classList.add('active');
       document.getElementById('view-tournaments').style.display = view === 'tournaments' ? 'block' : 'none';
       document.getElementById('view-users').style.display = view === 'users' ? 'block' : 'none';
+      document.getElementById('view-reports').style.display = view === 'reports' ? 'block' : 'none';
     }
 
     async function loadAll() {
-      await Promise.all([loadTournaments(), loadUsers()]);
+      await Promise.all([loadTournaments(), loadUsers(), loadReports()]);
     }
 
     // ---------- Tournaments ----------
@@ -356,10 +376,72 @@
           <td>${esc(u.bgmiName)}</td>
           <td>${esc(u.email)}</td>
           <td>${esc(u.phone)}</td>
+          <td><b style="color:var(--green)">${Number(u.credits) || 0}</b></td>
           <td>${fmtDate(u.registeredAt)}</td>
-          <td><button class="btn btn-outline btn-sm" onclick="openUserEdit('${u.id}')">Edit</button></td>
+          <td style="white-space:nowrap">
+            <button class="btn btn-outline btn-sm" onclick="openUserEdit('${u.id}')">Edit</button>
+            <button class="btn btn-success btn-sm" onclick="addCredits('${u.id}', ${Number(u.credits) || 0})">Credits</button>
+          </td>
         </tr>
-      `).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No users registered yet</td></tr>';
+      `).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--muted)">No users registered yet</td></tr>';
+    }
+
+    async function addCredits(userId, currentCredits) {
+      const input = prompt(`Current balance: ${currentCredits} credits.\nEnter amount to add (use a negative number to deduct):`, '100');
+      if (input === null) return;
+      const amount = Number(input);
+      if (!Number.isFinite(amount) || amount === 0) {
+        alert('Enter a non-zero number.');
+        return;
+      }
+      const res = await fetch(`/api/admin/users/${userId}/credits`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Failed to update credits'); return; }
+      loadUsers();
+    }
+
+    // ---------- Reports ----------
+    const REPORT_TYPE_LABELS = { cheating: 'Cheating', server_error: 'Server Error', other: 'Other' };
+    const REPORT_STATUS_LABELS = { pending: 'Pending', approved: 'Approved', rejected: 'Rejected' };
+
+    async function loadReports() {
+      const res = await fetch('/api/admin/reports');
+      if (!res.ok) return;
+      const reports = await res.json();
+      document.getElementById('statPendingReports').textContent = reports.filter(r => r.status === 'pending').length;
+
+      document.getElementById('reportRows').innerHTML = reports.map(r => `
+        <tr>
+          <td>${esc(r.bgmiName)}<br><span style="color:var(--muted);font-size:0.78rem">ID: ${esc(r.bgmiId)}</span></td>
+          <td>${esc(r.tournamentName)}</td>
+          <td>${esc(REPORT_TYPE_LABELS[r.type] || r.type)}</td>
+          <td>${r.reportedBgmiId ? esc(r.reportedBgmiId) : '—'}</td>
+          <td style="max-width:260px">${esc(r.description)}</td>
+          <td>${fmtDate(r.createdAt)}</td>
+          <td>
+            <span class="status-badge status-${r.status === 'approved' ? 'completed' : r.status === 'rejected' ? 'live' : 'upcoming'}">${REPORT_STATUS_LABELS[r.status]}</span>
+            ${r.status === 'approved' ? `<br><span style="color:var(--green);font-size:0.78rem">+${r.creditsRefunded} credits</span>` : ''}
+          </td>
+          <td style="white-space:nowrap">
+            ${r.status === 'pending'
+              ? `<button class="btn btn-success btn-sm" onclick="resolveReport('${r.id}', 'approve')">Approve</button>
+                 <button class="btn btn-danger btn-sm" onclick="resolveReport('${r.id}', 'reject')">Reject</button>`
+              : '<span style="color:var(--muted);font-size:0.8rem">Resolved</span>'}
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No reports filed yet</td></tr>';
+    }
+
+    async function resolveReport(id, action) {
+      if (action === 'reject' && !confirm('Reject this report? No credits will be refunded.')) return;
+      const res = await fetch(`/api/admin/reports/${id}/${action}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Failed to resolve report'); return; }
+      await Promise.all([loadReports(), loadUsers()]);
     }
 
     // ---------- Edit User modal ----------

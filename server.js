@@ -16,7 +16,7 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
-let usersCol, tournamentsCol;
+let usersCol, tournamentsCol, reportsCol;
 
 function clean(doc) {
   if (!doc) return doc;
@@ -47,6 +47,9 @@ function verifyPassword(password, stored) {
 // ---------- Admin credentials (change these!) ----------
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
 const ADMIN_PASS = process.env.ADMIN_PASS || "admin123";
+
+// Free starting credit balance for new players
+const STARTING_CREDITS = 100;
 
 // ---------- Middleware ----------
 app.use(express.json());
@@ -119,12 +122,13 @@ app.post(
       email,
       phone: String(phone),
       password: hashPassword(password),
+      credits: STARTING_CREDITS,
       registeredAt: new Date().toISOString(),
     };
     await usersCol.insertOne(user);
 
     req.session.userId = user.id;
-    res.json({ success: true, user: { id: user.id, fullName, bgmiId: user.bgmiId, bgmiName } });
+    res.json({ success: true, user: { id: user.id, fullName, bgmiId: user.bgmiId, bgmiName, credits: user.credits } });
   }),
 );
 
@@ -332,14 +336,72 @@ app.post(
     }
 
     const user = await usersCol.findOne({ id: req.session.userId });
+    const cost = Number(t.entryFee) || 0;
+    const balance = Number(user.credits) || 0;
+    if (cost > 0 && balance < cost) {
+      return res.status(409).json({ error: `Not enough credits. You have ${balance}, joining costs ${cost}.` });
+    }
+
     t.players.push({
       userId: user.id,
       bgmiId: user.bgmiId,
       bgmiName: user.bgmiName,
       joinedAt: new Date().toISOString(),
+      creditsSpent: cost,
     });
     await tournamentsCol.updateOne({ id: t.id }, { $set: { players: t.players } });
-    res.json({ success: true, roomId: t.roomId, roomPassword: t.roomPassword });
+    if (cost > 0) {
+      await usersCol.updateOne({ id: user.id }, { $inc: { credits: -cost } });
+    }
+    res.json({ success: true, roomId: t.roomId, roomPassword: t.roomPassword, creditsSpent: cost });
+  }),
+);
+
+// ================= REPORTS (cheating / server errors / other issues) =================
+
+const REPORT_TYPES = ["cheating", "server_error", "other"];
+
+// Submit a report about a tournament (e.g. another player cheating, or a server error that blocked play)
+app.post(
+  "/api/reports",
+  requireUser,
+  ah(async (req, res) => {
+    const { tournamentId, type, reportedBgmiId, description } = req.body || {};
+    if (!tournamentId || !REPORT_TYPES.includes(type) || !description || !description.trim()) {
+      return res.status(400).json({ error: "tournamentId, a valid type, and a description are required" });
+    }
+    const t = await tournamentsCol.findOne({ id: tournamentId });
+    if (!t) return res.status(404).json({ error: "Tournament not found" });
+
+    const user = await usersCol.findOne({ id: req.session.userId });
+    const report = {
+      id: crypto.randomUUID(),
+      tournamentId: t.id,
+      tournamentName: t.name,
+      userId: user.id,
+      bgmiId: user.bgmiId,
+      bgmiName: user.bgmiName,
+      type,
+      reportedBgmiId: reportedBgmiId ? String(reportedBgmiId).trim() : "",
+      description: description.trim(),
+      status: "pending",
+      creditsRefunded: 0,
+      createdAt: new Date().toISOString(),
+      resolvedAt: null,
+    };
+    await reportsCol.insertOne(report);
+    res.json({ success: true, report: clean(report) });
+  }),
+);
+
+// The logged-in player's own reports
+app.get(
+  "/api/reports",
+  requireUser,
+  ah(async (req, res) => {
+    const reports = await reportsCol.find({ userId: req.session.userId }).toArray();
+    reports.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.json(cleanAll(reports));
   }),
 );
 
@@ -440,6 +502,78 @@ app.put(
 
     const { password: _pw, ...safe } = clean(user);
     res.json({ success: true, user: safe });
+  }),
+);
+
+// Add (or remove, with a negative amount) credits for a user
+app.post(
+  "/api/admin/users/:id/credits",
+  requireAdmin,
+  ah(async (req, res) => {
+    const amount = Number(req.body?.amount);
+    if (!Number.isFinite(amount) || amount === 0) {
+      return res.status(400).json({ error: "amount must be a non-zero number" });
+    }
+    const user = await usersCol.findOne({ id: req.params.id });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    await usersCol.updateOne({ id: user.id }, { $inc: { credits: amount } });
+    const updated = await usersCol.findOne({ id: user.id });
+    const { password: _pw, ...safe } = clean(updated);
+    res.json({ success: true, user: safe });
+  }),
+);
+
+// All reports, newest first
+app.get(
+  "/api/admin/reports",
+  requireAdmin,
+  ah(async (req, res) => {
+    const reports = await reportsCol.find({}).toArray();
+    reports.sort((a, b) => {
+      if (a.status === "pending" && b.status !== "pending") return -1;
+      if (a.status !== "pending" && b.status === "pending") return 1;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+    res.json(cleanAll(reports));
+  }),
+);
+
+// Approve a report: refunds the credits that player spent joining that tournament
+app.post(
+  "/api/admin/reports/:id/approve",
+  requireAdmin,
+  ah(async (req, res) => {
+    const report = await reportsCol.findOne({ id: req.params.id });
+    if (!report) return res.status(404).json({ error: "Report not found" });
+    if (report.status !== "pending") return res.status(409).json({ error: "This report was already resolved" });
+
+    const t = await tournamentsCol.findOne({ id: report.tournamentId });
+    const playerEntry = t && (t.players || []).find((p) => p.userId === report.userId);
+    const refund = Number(playerEntry?.creditsSpent) || 0;
+
+    if (refund > 0) {
+      await usersCol.updateOne({ id: report.userId }, { $inc: { credits: refund } });
+    }
+    await reportsCol.updateOne(
+      { id: report.id },
+      { $set: { status: "approved", creditsRefunded: refund, resolvedAt: new Date().toISOString() } },
+    );
+    res.json({ success: true, creditsRefunded: refund });
+  }),
+);
+
+// Reject a report — no refund
+app.post(
+  "/api/admin/reports/:id/reject",
+  requireAdmin,
+  ah(async (req, res) => {
+    const report = await reportsCol.findOne({ id: req.params.id });
+    if (!report) return res.status(404).json({ error: "Report not found" });
+    if (report.status !== "pending") return res.status(409).json({ error: "This report was already resolved" });
+
+    await reportsCol.updateOne({ id: report.id }, { $set: { status: "rejected", resolvedAt: new Date().toISOString() } });
+    res.json({ success: true });
   }),
 );
 
@@ -585,7 +719,11 @@ async function start() {
   const db = client.db(MONGODB_DB);
   usersCol = db.collection("users");
   tournamentsCol = db.collection("tournaments");
+  reportsCol = db.collection("reports");
   console.log("Connected to MongoDB");
+
+  // Backfill: accounts registered before the credits system existed start with the same free balance
+  await usersCol.updateMany({ credits: { $exists: false } }, { $set: { credits: STARTING_CREDITS } });
 
   app.listen(PORT, () => {
     console.log(`\n  BGMI Tournament server running:  http://localhost:${PORT}`);
