@@ -151,7 +151,7 @@ a:hover {
 .bg-slideshow .bg-scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(13, 15, 20, 0.85), rgba(13, 15, 20, 0.93));
+  background: linear-gradient(90deg, rgba(13, 15, 20, 0.35) 0%, rgba(13, 15, 20, 0.55) 45%, rgba(13, 15, 20, 0.85) 78%, rgba(13, 15, 20, 0.92) 100%);
 }
 @keyframes bgFade {
   0%,
@@ -177,11 +177,23 @@ a:hover {
   padding: 30px 16px;
   background: radial-gradient(ellipse at 20% 10%, rgba(245, 166, 35, 0.1), transparent 50%), radial-gradient(ellipse at 80% 90%, rgba(255, 122, 0, 0.08), transparent 50%);
 }
+.auth-wrap.pos-right {
+  justify-content: flex-end;
+  padding-right: 8vw;
+}
+@media (max-width: 720px) {
+  .auth-wrap.pos-right {
+    justify-content: center;
+    padding-right: 16px;
+  }
+}
 .auth-card {
   width: 100%;
   max-width: 440px;
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: rgba(26, 31, 43, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(44, 53, 71, 0.7);
   border-radius: 14px;
   padding: 34px 30px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
