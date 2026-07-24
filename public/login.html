@@ -14,7 +14,16 @@
     <div class="bg-slide" style="background-image:url('img/bg/bg4.jpg')"></div>
     <div class="bg-scrim"></div>
   </div>
-  <div class="auth-wrap pos-right">
+  <div class="login-layout">
+    <!-- ===== YouTube live video box ===== -->
+    <div class="yt-box" id="ytBox" style="display:none">
+      <div class="yt-thumb" id="ytThumb" onclick="playYt()">
+        <img id="ytThumbImg" src="" alt="Live stream thumbnail">
+        <div class="yt-play-btn">▶</div>
+        <div class="yt-thumb-label">Tap to watch live</div>
+      </div>
+    </div>
+
     <div class="auth-card">
       <div class="brand">🎮 BGMI <span>TOURNAMENT</span></div>
       <div class="subtitle">Login with your BGMI ID</div>
@@ -39,6 +48,49 @@
       </div>
     </div>
   </div>
+
+  <script>
+    function getYoutubeId(url) {
+      if (!url) return '';
+      try {
+        const u = new URL(url);
+        let id = '';
+        if (u.hostname.includes('youtu.be')) {
+          id = u.pathname.slice(1);
+        } else if (u.searchParams.get('v')) {
+          id = u.searchParams.get('v');
+        } else if (u.pathname.includes('/live/')) {
+          id = u.pathname.split('/live/')[1];
+        } else if (u.pathname.includes('/embed/')) {
+          id = u.pathname.split('/embed/')[1];
+        }
+        return (id || '').split('?')[0].split('&')[0];
+      } catch {
+        return '';
+      }
+    }
+
+    let ytVideoId = '';
+
+    function playYt() {
+      if (!ytVideoId) return;
+      const box = document.getElementById('ytBox');
+      box.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytVideoId}?autoplay=1" title="YouTube live stream" frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    }
+
+    (async function loadYtSetting() {
+      try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+        ytVideoId = getYoutubeId(data.youtubeUrl);
+        if (ytVideoId) {
+          document.getElementById('ytThumbImg').src = `https://img.youtube.com/vi/${ytVideoId}/hqdefault.jpg`;
+          document.getElementById('ytBox').style.display = 'flex';
+        }
+      } catch {}
+    })();
+  </script>
 
   <script>
     const msg = document.getElementById('msg');

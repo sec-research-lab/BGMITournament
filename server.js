@@ -16,7 +16,8 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
-let usersCol, tournamentsCol, reportsCol;
+let usersCol, tournamentsCol, reportsCol, settingsCol;
+const SETTINGS_ID = "app";
 
 function clean(doc) {
   if (!doc) return doc;
@@ -405,6 +406,27 @@ app.get(
   }),
 );
 
+// ================= SETTINGS (public read, admin write) =================
+
+// Public — used by the login screen to know whether/what to show for the YouTube live button
+app.get(
+  "/api/settings",
+  ah(async (req, res) => {
+    const settings = await settingsCol.findOne({ id: SETTINGS_ID });
+    res.json({ youtubeUrl: settings?.youtubeUrl || "" });
+  }),
+);
+
+app.put(
+  "/api/admin/settings",
+  requireAdmin,
+  ah(async (req, res) => {
+    const youtubeUrl = String(req.body?.youtubeUrl || "").trim();
+    await settingsCol.updateOne({ id: SETTINGS_ID }, { $set: { id: SETTINGS_ID, youtubeUrl } }, { upsert: true });
+    res.json({ success: true, youtubeUrl });
+  }),
+);
+
 // ================= ADMIN =================
 
 app.post("/api/admin/login", (req, res) => {
@@ -720,6 +742,7 @@ async function start() {
   usersCol = db.collection("users");
   tournamentsCol = db.collection("tournaments");
   reportsCol = db.collection("reports");
+  settingsCol = db.collection("settings");
   console.log("Connected to MongoDB");
 
   // Backfill: accounts registered before the credits system existed start with the same free balance

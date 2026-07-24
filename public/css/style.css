@@ -664,6 +664,85 @@ td .thumb {
   border: 2px dashed var(--border);
 }
 
+/* ===== Login layout: video box + auth card side by side ===== */
+.login-layout {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 60px;
+  padding: 30px 16px;
+  background: radial-gradient(ellipse at 20% 10%, rgba(245, 166, 35, 0.1), transparent 50%), radial-gradient(ellipse at 80% 90%, rgba(255, 122, 0, 0.08), transparent 50%);
+}
+
+/* ===== YouTube live video box (login screen) ===== */
+.yt-box {
+  width: 100%;
+  max-width: 480px;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  display: none;
+}
+.yt-box iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+.yt-thumb {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.yt-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+}
+.yt-play-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(255, 69, 58, 0.9);
+  color: #fff;
+  font-size: 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 6px;
+  box-shadow: 0 0 0 8px rgba(255, 69, 58, 0.18);
+  transition: transform 0.15s;
+}
+.yt-thumb:hover .yt-play-btn {
+  transform: translate(-50%, -50%) scale(1.08);
+}
+.yt-thumb-label {
+  position: absolute;
+  bottom: 14px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+@media (max-width: 900px) {
+  .login-layout {
+    gap: 24px;
+  }
+}
+
 .version-tag {
   position: fixed;
   bottom: 6px;

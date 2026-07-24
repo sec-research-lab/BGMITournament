@@ -43,6 +43,7 @@
         <button class="active" data-view="tournaments" onclick="switchView('tournaments', this)">🏆 Tournaments</button>
         <button data-view="users" onclick="switchView('users', this)">👥 Registered Users</button>
         <button data-view="reports" onclick="switchView('reports', this)">🚩 Reports</button>
+        <button data-view="settings" onclick="switchView('settings', this)">⚙️ Settings</button>
       </div>
 
       <div class="admin-content">
@@ -104,6 +105,22 @@
               </thead>
               <tbody id="reportRows"></tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Settings view -->
+        <div id="view-settings" style="display:none">
+          <div class="page-title" style="margin-bottom:16px">Settings</div>
+          <div class="page-sub">Set the YouTube link players see when they tap the LIVE tile on the login screen.</div>
+          <div style="max-width:520px">
+            <div id="settingsMsg" class="form-msg"></div>
+            <form id="settingsForm">
+              <div class="form-group">
+                <label>YouTube Live Link</label>
+                <input type="text" id="sYoutubeUrl" placeholder="https://www.youtube.com/watch?v=...">
+              </div>
+              <button type="submit" class="btn btn-primary">Save</button>
+            </form>
           </div>
         </div>
       </div>
@@ -308,11 +325,40 @@
       document.getElementById('view-tournaments').style.display = view === 'tournaments' ? 'block' : 'none';
       document.getElementById('view-users').style.display = view === 'users' ? 'block' : 'none';
       document.getElementById('view-reports').style.display = view === 'reports' ? 'block' : 'none';
+      document.getElementById('view-settings').style.display = view === 'settings' ? 'block' : 'none';
     }
 
     async function loadAll() {
-      await Promise.all([loadTournaments(), loadUsers(), loadReports()]);
+      await Promise.all([loadTournaments(), loadUsers(), loadReports(), loadSettings()]);
     }
+
+    // ---------- Settings ----------
+    async function loadSettings() {
+      const res = await fetch('/api/settings');
+      if (!res.ok) return;
+      const data = await res.json();
+      document.getElementById('sYoutubeUrl').value = data.youtubeUrl || '';
+    }
+
+    document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('settingsMsg');
+      msg.className = 'form-msg';
+      try {
+        const res = await fetch('/api/admin/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ youtubeUrl: document.getElementById('sYoutubeUrl').value.trim() })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Save failed');
+        msg.className = 'form-msg success';
+        msg.textContent = 'Saved!';
+      } catch (err) {
+        msg.className = 'form-msg error';
+        msg.textContent = err.message;
+      }
+    });
 
     // ---------- Tournaments ----------
     async function loadTournaments() {
